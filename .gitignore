@@ -1,0 +1,7 @@
+node_modules/
+career.db
+package-lock.json
+.env
+__pycache__/
+.venv/
+*.db
