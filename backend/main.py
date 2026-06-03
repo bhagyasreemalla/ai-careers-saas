@@ -12,29 +12,19 @@ app = FastAPI(
     title="AI Global Career Navigator",
     version="1.0.0"
 )
-<<<<<<< HEAD
 
-# CORS
-=======
->>>>>>> a54e463 (fix cors for frontend)
+# CORS Configuration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
-<<<<<<< HEAD
-        "https://ai-careers-saas.onrender.com",
-=======
         "https://ai-careers-saas.onrender.com"
->>>>>>> a54e463 (fix cors for frontend)
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-<<<<<<< HEAD
 
-=======
->>>>>>> a54e463 (fix cors for frontend)
 
 class UserInput(BaseModel):
     skills: str
@@ -83,9 +73,9 @@ Use this exact structure:
   "ai_insight": ""
 }}
 
+Return JSON only.
 Do not use markdown.
 Do not use ```json.
-Return JSON only.
 """
 
         response = client.chat.completions.create(

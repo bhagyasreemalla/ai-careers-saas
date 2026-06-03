@@ -4,8 +4,12 @@ groq
 python-dotenv
 pydantic
 <<<<<<< HEAD
+<<<<<<< HEAD
 click
 =======
 python-dotenv
 click
 >>>>>>> 45a8261 (upgrade analyze endpoint)
+=======
+click
+>>>>>>> 6d9db8b (add cors and frontend updates)

@@ -6,148 +6,93 @@ export default function Home() {
   const [skills, setSkills] = useState("");
   const [role, setRole] = useState("");
   const [country, setCountry] = useState("");
-
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<any>(null);
-  const [error, setError] = useState("");
+  const [result, setResult] = useState<any>(null);
 
-  const analyze = async () => {
+  const analyzeCareer = async () => {
     setLoading(true);
-    setError("");
-    setData(null);
 
     try {
-      const res = await fetch("https://YOUR_BACKEND_URL.onrender.com/analyze", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ skills, role, country }),
-      });
+      const res = await fetch(
+        "https://ai-careers-saas.onrender.com/analyze",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            skills,
+            role,
+            country,
+          }),
+        }
+      );
 
-      const result = await res.json();
-
-      if (!res.ok) throw new Error(result.detail || "API Error");
-
-      setData(result);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+      const data = await res.json();
+      setResult(data);
+    } catch (error) {
+      console.error(error);
+      alert("Error connecting to backend");
     }
+
+    setLoading(false);
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-6">
+    <main className="min-h-screen bg-gradient-to-br from-indigo-950 via-slate-900 to-black text-white p-8">
       <div className="max-w-5xl mx-auto">
 
-        {/* HEADER */}
-        <h1 className="text-3xl font-bold mb-2">
-          AI Career Navigator 🚀
+        <h1 className="text-5xl font-bold text-center mb-4">
+          🚀 AI Global Career Navigator
         </h1>
-        <p className="text-gray-400 mb-8">
-          Analyze your global career potential instantly
+
+        <p className="text-center text-gray-300 mb-10">
+          Discover your career potential worldwide using AI
         </p>
 
-        {/* INPUT BOX */}
-        <div className="bg-gray-900 p-6 rounded-xl shadow-lg mb-8">
-          <div className="grid gap-4 md:grid-cols-3">
-            
-            <input
-              className="p-3 rounded bg-gray-800 text-white"
-              placeholder="Skills (e.g. HR, Jira)"
-              value={skills}
-              onChange={(e) => setSkills(e.target.value)}
-            />
+        <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 border border-white/10">
 
-            <input
-              className="p-3 rounded bg-gray-800 text-white"
-              placeholder="Target Role"
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-            />
+          <input
+            className="w-full p-4 rounded-xl text-black mb-4"
+            placeholder="Skills (Python, SQL, HR Analytics)"
+            value={skills}
+            onChange={(e) => setSkills(e.target.value)}
+          />
 
-            <input
-              className="p-3 rounded bg-gray-800 text-white"
-              placeholder="Country"
-              value={country}
-              onChange={(e) => setCountry(e.target.value)}
-            />
-          </div>
+          <input
+            className="w-full p-4 rounded-xl text-black mb-4"
+            placeholder="Target Role"
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+          />
+
+          <input
+            className="w-full p-4 rounded-xl text-black mb-6"
+            placeholder="Country"
+            value={country}
+            onChange={(e) => setCountry(e.target.value)}
+          />
 
           <button
-            onClick={analyze}
-            className="mt-4 bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded font-semibold"
+            onClick={analyzeCareer}
+            className="w-full bg-purple-600 hover:bg-purple-700 p-4 rounded-xl font-bold text-lg"
           >
             {loading ? "Analyzing..." : "Analyze Career"}
           </button>
         </div>
 
-        {/* ERROR */}
-        {error && (
-          <div className="bg-red-900 text-red-200 p-4 rounded mb-6">
-            {error}
-          </div>
-        )}
+        {result && (
+          <div className="mt-10 bg-white/10 backdrop-blur-lg rounded-3xl p-8 border border-white/10">
+            <h2 className="text-3xl font-bold mb-4">
+              Career Insights
+            </h2>
 
-        {/* RESULTS */}
-        {data && (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-
-            <Card title="Career Score" value={data.career_score} />
-            <Card title="Visa Score" value={data.visa_score} />
-            <Card title="Competition" value={data.competition} />
-            <Card title="Salary Range" value={data.salary_range} />
-
-            <div className="bg-gray-900 p-4 rounded-xl col-span-full">
-              <h3 className="font-bold mb-2">Missing Skills</h3>
-              <div className="flex flex-wrap gap-2">
-                {data.missing_skills?.map((s: string, i: number) => (
-                  <span key={i} className="bg-gray-800 px-3 py-1 rounded-full text-sm">
-                    {s}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            <div className="bg-gray-900 p-4 rounded-xl">
-              <h3 className="font-bold mb-2">Top Countries</h3>
-              <ul className="text-gray-300 space-y-1">
-                {data.top_countries?.map((c: string, i: number) => (
-                  <li key={i}>🌍 {c}</li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="bg-gray-900 p-4 rounded-xl col-span-full">
-              <h3 className="font-bold mb-2">AI Insight</h3>
-              <p className="text-gray-300 whitespace-pre-line">
-                {data.ai_insight}
-              </p>
-            </div>
-
-            <div className="bg-gray-900 p-4 rounded-xl col-span-full">
-              <h3 className="font-bold mb-2">Roadmap</h3>
-              <ol className="list-decimal ml-5 text-gray-300">
-                {data.roadmap?.map((r: string, i: number) => (
-                  <li key={i}>{r}</li>
-                ))}
-              </ol>
-            </div>
-
+            <pre className="overflow-auto whitespace-pre-wrap">
+              {JSON.stringify(result, null, 2)}
+            </pre>
           </div>
         )}
       </div>
-    </div>
-  );
-}
-
-/* CARD COMPONENT */
-function Card({ title, value }: any) {
-  return (
-    <div className="bg-gray-900 p-6 rounded-xl shadow">
-      <h3 className="text-gray-400 text-sm">{title}</h3>
-      <p className="text-2xl font-bold mt-2">{value}</p>
-    </div>
+    </main>
   );
 }
