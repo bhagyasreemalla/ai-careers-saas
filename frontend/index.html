@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Career SaaS</title>
+</head>
+
+<body>
+<h1>AI Career Navigator 🚀</h1>
+
+<input id="skills" placeholder="Skills"><br><br>
+<input id="role" placeholder="Role"><br><br>
+<input id="country" placeholder="Country"><br><br>
+
+<button onclick="analyze()">Analyze</button>
+
+<pre id="output"></pre>
+
+<script>
+async function analyze() {
+
+    const res = await fetch("https://ai-careers-saas.onrender.com/analyze", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            skills: document.getElementById("skills").value,
+            role: document.getElementById("role").value,
+            country: document.getElementById("country").value
+        })
+    });
+
+    const data = await res.json();
+    document.getElementById("output").innerText =
+        JSON.stringify(data, null, 2);
+}
+</script>
+
+</body>
+</html>
