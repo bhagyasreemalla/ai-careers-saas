@@ -1,6 +1,6 @@
 fastapi
 uvicorn
 groq
-pydantic
 python-dotenv
+pydantic
 click
