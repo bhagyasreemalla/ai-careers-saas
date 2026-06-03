@@ -1,104 +1,113 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from groq import Groq
-from dotenv import load_dotenv
 import os
-import json
 
-load_dotenv()
+app = FastAPI()
 
-app = FastAPI(
-    title="AI Global Career Navigator",
-    version="1.0.0"
-)
-
-# CORS Configuration
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "https://ai-careers-saas.onrender.com"
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-class UserInput(BaseModel):
+# -----------------------------
+# Input Schema
+# -----------------------------
+class InputData(BaseModel):
     skills: str
     role: str
     country: str
 
 
+# -----------------------------
+# Health Check (Render uses this)
+# -----------------------------
 @app.get("/")
-def home():
-    return {"status": "AI Career SaaS Running 🚀"}
+def health():
+    return {
+        "status": "running",
+        "message": "AI Career Navigator API is live 🚀"
+    }
 
 
-@app.post("/analyze")
-def analyze(data: UserInput):
+# -----------------------------
+# Simple Skill Scoring Logic
+# -----------------------------
+def skill_score(skills: str):
+    required = ["python", "sql", "excel", "analytics", "communication"]
+    skills = skills.lower()
+    return sum(1 for s in required if s in skills)
+
+
+def missing_skills(skills: str):
+    required = ["python", "sql", "excel", "analytics", "communication"]
+    skills = skills.lower()
+    return [s for s in required if s not in skills]
+
+
+# -----------------------------
+# OPTIONAL AI FUNCTION (SAFE)
+# -----------------------------
+def ai_insight(skills, role, country):
+    """
+    This only runs if OPENAI_API_KEY exists.
+    If not, system falls back to rule-based logic.
+    """
+
+    api_key = os.getenv("OPENAI_API_KEY")
+
+    if not api_key:
+        return None
+
     try:
-        api_key = os.getenv("GROQ_API_KEY")
+        from openai import OpenAI
 
-        if not api_key:
-            return {
-                "error": "GROQ_API_KEY not found"
-            }
-
-        client = Groq(api_key=api_key)
+        client = OpenAI(api_key=api_key)
 
         prompt = f"""
-You are an expert global career advisor.
+        You are a career advisor AI.
 
-Skills: {data.skills}
-Target Role: {data.role}
-Country: {data.country}
+        User Skills: {skills}
+        Target Role: {role}
+        Country: {country}
 
-Return ONLY valid JSON.
-
-Use this exact structure:
-
-{{
-  "career_score": 0,
-  "visa_score": 0,
-  "competition": "",
-  "salary_range": "",
-  "missing_skills": [],
-  "top_countries": [],
-  "top_companies": [],
-  "jobs": [],
-  "roadmap": [],
-  "ai_insight": ""
-}}
-
-Return JSON only.
-Do not use markdown.
-Do not use ```json.
-"""
+        Return:
+        - Match score (0-100)
+        - Missing skills
+        - Career advice
+        - Learning roadmap
+        """
 
         response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
-            temperature=0.3
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}]
         )
 
-        result = response.choices[0].message.content.strip()
-
-        try:
-            return json.loads(result)
-        except Exception:
-            return {
-                "raw_response": result
-            }
+        return response.choices[0].message.content
 
     except Exception as e:
+        return None
+
+
+# -----------------------------
+# Main API Endpoint
+# -----------------------------
+@app.post("/analyze")
+def analyze(data: InputData):
+
+    try:
+        score = skill_score(data.skills)
+        missing = missing_skills(data.skills)
+
+        ai_result = ai_insight(data.skills, data.role, data.country)
+
         return {
-            "error": str(e)
+            "input": {
+                "skills": data.skills,
+                "role": data.role,
+                "country": data.country
+            },
+            "rule_based": {
+                "match_score": score * 20,
+                "missing_skills": missing
+            },
+            "ai_insight": ai_result if ai_result else "AI not enabled (missing API key)",
+            "status": "success"
         }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
