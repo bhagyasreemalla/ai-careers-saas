@@ -3,4 +3,9 @@ uvicorn
 groq
 python-dotenv
 pydantic
+<<<<<<< HEAD
 click
+=======
+python-dotenv
+click
+>>>>>>> 45a8261 (upgrade analyze endpoint)
