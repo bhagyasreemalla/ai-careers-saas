@@ -37,8 +37,15 @@ def analyze(data: UserInput):
 
         client = Groq(api_key=api_key)
 
+<<<<<<< HEAD
         prompt = f"""
 You are an expert global career advisor.
+=======
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "user", "content": prompt}]
+    )
+>>>>>>> 18e703b (fix: update deprecated Groq model)
 
 Analyze the profile below and return ONLY valid JSON.
 
