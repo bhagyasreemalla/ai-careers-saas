@@ -1,66 +1,94 @@
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from groq import Groq
 from dotenv import load_dotenv
 import os
-from groq import Groq
+import json
 
 load_dotenv()
 
-app = FastAPI()
-
-# CORS (IMPORTANT FOR DEPLOYMENT)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+app = FastAPI(
+    title="AI Global Career Navigator",
+    version="1.0.0"
 )
 
-# GROQ CLIENT
-client = Groq(
-    api_key=os.getenv("GROQ_API_KEY")
-)
 
-# INPUT MODEL
 class UserInput(BaseModel):
     skills: str
     role: str
     country: str
 
+
 @app.get("/")
 def home():
     return {"status": "AI Career SaaS Running 🚀"}
 
+
 @app.post("/analyze")
 def analyze(data: UserInput):
 
-    prompt = f"""
-    You are a global HR AI assistant.
+    try:
+        api_key = os.getenv("GROQ_API_KEY")
 
-    Skills: {data.skills}
-    Role: {data.role}
-    Country: {data.country}
+        if not api_key:
+            return {
+                "error": "GROQ_API_KEY not found"
+            }
 
-    Return JSON with:
-    career_score (0-100),
-    visa_score (0-100),
-    competition,
-    salary_range,
-    missing_skills (list),
-    top_countries (list),
-    top_companies (list),
-    jobs (list),
-    roadmap (list),
-    ai_insight (string)
-    """
+        client = Groq(api_key=api_key)
 
-    response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=[{"role": "user", "content": prompt}]
-    )
+        prompt = f"""
+You are an expert global career advisor.
 
-    return {
-        "result": response.choices[0].message.content
-    }
+Analyze the profile below and return ONLY valid JSON.
+
+Skills: {data.skills}
+Target Role: {data.role}
+Country: {data.country}
+
+Return this exact structure:
+
+{{
+  "career_score": 0,
+  "visa_score": 0,
+  "competition": "",
+  "salary_range": "",
+  "missing_skills": [],
+  "top_countries": [],
+  "top_companies": [],
+  "jobs": [],
+  "roadmap": [],
+  "ai_insight": ""
+}}
+
+Do not use markdown.
+Do not wrap the response in ```json.
+Return only JSON.
+"""
+
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            temperature=0.3
+        )
+
+        result = response.choices[0].message.content.strip()
+
+        # Convert AI JSON string to actual JSON object
+        try:
+            parsed = json.loads(result)
+            return parsed
+        except Exception:
+            return {
+                "raw_response": result
+            }
+
+    except Exception as e:
+        return {
+            "error": str(e)
+        }
