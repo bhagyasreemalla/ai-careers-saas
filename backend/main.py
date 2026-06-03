@@ -2,9 +2,14 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI()
+# -----------------------------
+# APP INIT
+# -----------------------------
+app = FastAPI(title="AI Global Career Navigator")
 
-# ✅ Fix frontend/backend connection issues
+# -----------------------------
+# CORS FIX (frontend connection)
+# -----------------------------
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # later replace with your frontend URL
@@ -22,35 +27,101 @@ class AnalyzeRequest(BaseModel):
     country: str
 
 # -----------------------------
-# ROOT (test if backend is alive)
+# ROOT CHECK
 # -----------------------------
 @app.get("/")
 def home():
     return {"status": "AI Global Career Navigator Running 🚀"}
 
 # -----------------------------
-# MAIN API ENDPOINT
+# CAREER ANALYSIS ENDPOINT
 # -----------------------------
 @app.post("/analyze")
 def analyze(data: AnalyzeRequest):
-    
+
     skills = data.skills.lower()
     role = data.role.lower()
+    country = data.country.lower()
 
-    # simple logic (replace with your AI/LLM later)
     score = 0
+    matched_skills = []
 
-    if "python" in skills:
-        score += 30
-    if "sql" in skills:
+    # -----------------------------
+    # HR / Talent Domain Skills
+    # -----------------------------
+    if "talent acquisition" in skills:
         score += 20
+        matched_skills.append("Talent Acquisition")
+
+    if "stakeholder" in skills:
+        score += 15
+        matched_skills.append("Stakeholder Management")
+
+    if "hrms" in skills:
+        score += 15
+        matched_skills.append("HRMS")
+
+    if "hris" in skills:
+        score += 15
+        matched_skills.append("HRIS")
+
+    if "erp" in skills:
+        score += 10
+        matched_skills.append("ERP Systems")
+
+    # -----------------------------
+    # Analytics / Tech Skills
+    # -----------------------------
+    if "powerbi" in skills or "power bi" in skills:
+        score += 25
+        matched_skills.append("Power BI")
+
+    if "excel" in skills:
+        score += 10
+        matched_skills.append("Excel Analytics")
+
+    if "sql" in skills:
+        score += 15
+        matched_skills.append("SQL")
+
+    # -----------------------------
+    # Role-based boost
+    # -----------------------------
+    if "analyst" in role:
+        score += 10
+
     if "hr" in role:
-        score += 30
+        score += 20
 
-    recommendation = "Strong match for HR Analytics roles" if score > 50 else "Needs upskilling"
+    if "data" in role:
+        score += 15
 
+    # -----------------------------
+    # Country boost (simple logic)
+    # -----------------------------
+    if country == "usa":
+        score += 10
+    elif country == "india":
+        score += 5
+
+    # -----------------------------
+    # FINAL DECISION LOGIC
+    # -----------------------------
+    if score >= 80:
+        recommendation = "Excellent match for Global HR / People Analytics roles"
+    elif score >= 60:
+        recommendation = "Strong match for HR Analytics roles"
+    elif score >= 40:
+        recommendation = "Moderate match, needs upskilling"
+    else:
+        recommendation = "Needs significant upskilling"
+
+    # -----------------------------
+    # RESPONSE
+    # -----------------------------
     return {
         "input": data,
         "match_score": score,
+        "matched_skills": matched_skills,
         "recommendation": recommendation
     }
