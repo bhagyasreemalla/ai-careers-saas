@@ -4,14 +4,14 @@ from pydantic import BaseModel
 import requests
 import os
 from dotenv import load_dotenv
-from openai import OpenAI
+from groq import Groq
 
 # -----------------------------
 # INIT
 # -----------------------------
 load_dotenv()
 
-app = FastAPI(title="AI Career SaaS v2")
+app = FastAPI(title="AI Career SaaS v2 (Groq Powered)")
 
 app.add_middleware(
     CORSMiddleware,
@@ -26,7 +26,9 @@ app.add_middleware(
 # -----------------------------
 APP_ID = os.getenv("ADZUNA_APP_ID")
 APP_KEY = os.getenv("ADZUNA_APP_KEY")
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+
+client = Groq(api_key=GROQ_API_KEY)
 
 # -----------------------------
 # INPUT MODEL
@@ -41,7 +43,7 @@ class AnalyzeRequest(BaseModel):
 # -----------------------------
 @app.get("/")
 def home():
-    return {"status": "AI Career SaaS v2 running 🚀"}
+    return {"status": "AI Career SaaS (Groq + Adzuna) running 🚀"}
 
 # -----------------------------
 # FETCH JOBS
@@ -63,29 +65,29 @@ def fetch_jobs(skill, country):
         return []
 
 # -----------------------------
-# AI INSIGHT ENGINE
+# GROQ AI ENGINE
 # -----------------------------
-def generate_ai_insight(profile_text):
+def generate_ai_insight(prompt):
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="llama-3.1-70b-versatile",
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a senior career advisor. Give short structured advice."
+                    "content": "You are a world-class career advisor. Give structured, crisp, actionable insights."
                 },
                 {
                     "role": "user",
-                    "content": profile_text
+                    "content": prompt
                 }
             ]
         )
 
         return response.choices[0].message.content
 
-    except:
-        return "AI insight unavailable (check API key)"
+    except Exception as e:
+        return f"AI insight failed: {str(e)}"
 
 # -----------------------------
 # MAIN API
@@ -121,27 +123,30 @@ def analyze(data: AnalyzeRequest):
     score = min(total_jobs * 6, 100)
 
     # -----------------------------
-    # AI PROMPT
+    # GROQ PROMPT
     # -----------------------------
     prompt = f"""
 User Profile:
 Skills: {data.skills}
 Role: {data.role}
 Country: {data.country}
-Total Jobs Found: {total_jobs}
-Score: {score}
 
-Give:
-1. Market insight
+Market Data:
+Total Jobs Found: {total_jobs}
+Market Score: {score}
+
+Break down:
+1. Market demand
 2. Skill gaps
-3. Career roadmap (3 steps)
-4. Job targeting advice
+3. What to learn next (step-by-step roadmap)
+4. Job targeting strategy
+5. One motivational insight
 """
 
     ai_insight = generate_ai_insight(prompt)
 
     # -----------------------------
-    # FINAL RESPONSE (PRODUCT LEVEL)
+    # FINAL RESPONSE (SAA S LEVEL)
     # -----------------------------
     return {
         "profile": {
@@ -155,6 +160,7 @@ Give:
             "status": "Live Adzuna Data"
         },
         "skill_breakdown": breakdown,
-        "ai_career_insight": ai_insight,
-        "verdict": "AI-powered Career Intelligence Report generated"
+        "ai_insight": ai_insight,
+        "engine": "Groq (LLaMA 3.1)",
+        "status": "success"
     }
