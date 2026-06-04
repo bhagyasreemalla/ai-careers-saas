@@ -3,101 +3,103 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import requests
 import os
+from dotenv import load_dotenv
+from openai import OpenAI
 
 # -----------------------------
-# APP INIT
+# INIT
 # -----------------------------
-app = FastAPI(
-    title="AI Career SaaS",
-    description="Live Job Market Intelligence using Adzuna API",
-    version="1.0.0"
-)
+load_dotenv()
 
-# -----------------------------
-# CORS (ALLOW FRONTEND)
-# -----------------------------
+app = FastAPI(title="AI Career SaaS v2")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # change to Vercel URL in production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # -----------------------------
-# REQUEST MODEL
+# KEYS
+# -----------------------------
+APP_ID = os.getenv("ADZUNA_APP_ID")
+APP_KEY = os.getenv("ADZUNA_APP_KEY")
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+# -----------------------------
+# INPUT MODEL
 # -----------------------------
 class AnalyzeRequest(BaseModel):
     skills: str
     role: str
     country: str
 
-
 # -----------------------------
-# LOAD API KEYS (SAFE FOR DEPLOYMENT)
-# -----------------------------
-APP_ID = os.getenv("ADZUNA_APP_ID", "YOUR_APP_ID")
-APP_KEY = os.getenv("ADZUNA_APP_KEY", "YOUR_APP_KEY")
-
-
-# -----------------------------
-# ROOT ENDPOINT (FIXES "NOT FOUND")
+# HOME
 # -----------------------------
 @app.get("/")
 def home():
-    return {
-        "status": "AI Career SaaS Running 🚀",
-        "message": "Backend is live",
-        "docs": "/docs"
-    }
-
+    return {"status": "AI Career SaaS v2 running 🚀"}
 
 # -----------------------------
-# HEALTH CHECK
+# FETCH JOBS
 # -----------------------------
-@app.get("/health")
-def health():
-    return {"status": "ok"}
-
-
-# -----------------------------
-# FETCH LIVE JOBS FROM ADZUNA
-# -----------------------------
-def fetch_jobs(skill: str, country: str):
+def fetch_jobs(skill, country):
     try:
         url = f"https://api.adzuna.com/v1/api/jobs/{country}/search/1"
-
         params = {
             "app_id": APP_ID,
             "app_key": APP_KEY,
             "what": skill,
-            "results_per_page": 10,
-            "content-type": "application/json"
+            "results_per_page": 10
         }
 
-        response = requests.get(url, params=params, timeout=10)
-        data = response.json()
+        res = requests.get(url, params=params, timeout=10)
+        return res.json().get("results", [])
 
-        return data.get("results", [])
-
-    except Exception as e:
+    except:
         return []
 
+# -----------------------------
+# AI INSIGHT ENGINE
+# -----------------------------
+def generate_ai_insight(profile_text):
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a senior career advisor. Give short structured advice."
+                },
+                {
+                    "role": "user",
+                    "content": profile_text
+                }
+            ]
+        )
+
+        return response.choices[0].message.content
+
+    except:
+        return "AI insight unavailable (check API key)"
 
 # -----------------------------
-# MAIN ANALYSIS ENDPOINT
+# MAIN API
 # -----------------------------
 @app.post("/analyze")
 def analyze(data: AnalyzeRequest):
 
-    skills_list = [s.strip() for s in data.skills.split(",") if s.strip()]
+    skills = [s.strip() for s in data.skills.split(",")]
 
     total_jobs = 0
     breakdown = []
 
-    for skill in skills_list:
+    for skill in skills:
         jobs = fetch_jobs(skill, data.country)
-
         total_jobs += len(jobs)
 
         breakdown.append({
@@ -105,37 +107,54 @@ def analyze(data: AnalyzeRequest):
             "job_count": len(jobs),
             "top_jobs": [
                 {
-                    "title": job.get("title"),
-                    "company": job.get("company", {}).get("display_name"),
-                    "location": job.get("location", {}).get("display_name")
+                    "title": j.get("title"),
+                    "company": j.get("company", {}).get("display_name"),
+                    "location": j.get("location", {}).get("display_name")
                 }
-                for job in jobs[:5]
+                for j in jobs[:3]
             ]
         })
 
     # -----------------------------
-    # REAL MARKET SCORE ENGINE
+    # SCORE ENGINE
     # -----------------------------
-    score = min(total_jobs * 5, 100)
-
-    if score >= 80:
-        recommendation = "🔥 Excellent market demand (High hiring activity)"
-    elif score >= 50:
-        recommendation = "📈 Good demand (Solid career path)"
-    elif score >= 20:
-        recommendation = "⚠️ Moderate demand (Upskill recommended)"
-    else:
-        recommendation = "❌ Low demand (Strong upskilling required)"
+    score = min(total_jobs * 6, 100)
 
     # -----------------------------
-    # RESPONSE
+    # AI PROMPT
+    # -----------------------------
+    prompt = f"""
+User Profile:
+Skills: {data.skills}
+Role: {data.role}
+Country: {data.country}
+Total Jobs Found: {total_jobs}
+Score: {score}
+
+Give:
+1. Market insight
+2. Skill gaps
+3. Career roadmap (3 steps)
+4. Job targeting advice
+"""
+
+    ai_insight = generate_ai_insight(prompt)
+
+    # -----------------------------
+    # FINAL RESPONSE (PRODUCT LEVEL)
     # -----------------------------
     return {
-        "input": data.dict(),
-        "match_score": score,
-        "total_jobs_found": total_jobs,
-        "recommendation": recommendation,
+        "profile": {
+            "skills": data.skills,
+            "role": data.role,
+            "country": data.country
+        },
+        "market_data": {
+            "total_jobs_found": total_jobs,
+            "market_score": score,
+            "status": "Live Adzuna Data"
+        },
         "skill_breakdown": breakdown,
-        "data_source": "Adzuna Live API",
-        "status": "success"
+        "ai_career_insight": ai_insight,
+        "verdict": "AI-powered Career Intelligence Report generated"
     }
