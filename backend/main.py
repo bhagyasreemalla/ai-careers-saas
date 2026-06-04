@@ -11,7 +11,7 @@ from groq import Groq
 # -----------------------------
 load_dotenv()
 
-app = FastAPI(title="AI Career SaaS v2 (Groq Powered)")
+app = FastAPI(title="AI Career SaaS (Stable Version)")
 
 app.add_middleware(
     CORSMiddleware,
@@ -22,7 +22,7 @@ app.add_middleware(
 )
 
 # -----------------------------
-# KEYS
+# ENV KEYS
 # -----------------------------
 APP_ID = os.getenv("ADZUNA_APP_ID")
 APP_KEY = os.getenv("ADZUNA_APP_KEY")
@@ -39,55 +39,60 @@ class AnalyzeRequest(BaseModel):
     country: str
 
 # -----------------------------
-# HOME
+# HEALTH CHECK
 # -----------------------------
 @app.get("/")
 def home():
-    return {"status": "AI Career SaaS (Groq + Adzuna) running 🚀"}
+    return {"status": "backend running 🚀"}
 
 # -----------------------------
-# FETCH JOBS
+# SAFE JOB FETCH (NO HANGS)
 # -----------------------------
 def fetch_jobs(skill, country):
     try:
         url = f"https://api.adzuna.com/v1/api/jobs/{country}/search/1"
+
         params = {
             "app_id": APP_ID,
             "app_key": APP_KEY,
             "what": skill,
-            "results_per_page": 10
+            "results_per_page": 5
         }
 
-        res = requests.get(url, params=params, timeout=10)
-        return res.json().get("results", [])
+        res = requests.get(url, params=params, timeout=5)
 
-    except:
+        data = res.json()
+        return data.get("results", [])
+
+    except Exception as e:
+        print("Job fetch error:", e)
         return []
 
 # -----------------------------
-# GROQ AI ENGINE
+# GROQ AI (FAST + SAFE)
 # -----------------------------
 def generate_ai_insight(prompt):
-
     try:
         response = client.chat.completions.create(
             model="llama-3.1-70b-versatile",
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a world-class career advisor. Give structured, crisp, actionable insights."
+                    "content": "You are a career advisor. Give short, structured, practical advice."
                 },
                 {
                     "role": "user",
                     "content": prompt
                 }
-            ]
+            ],
+            temperature=0.7
         )
 
         return response.choices[0].message.content
 
     except Exception as e:
-        return f"AI insight failed: {str(e)}"
+        print("Groq error:", e)
+        return "AI insight temporarily unavailable."
 
 # -----------------------------
 # MAIN API
@@ -118,35 +123,32 @@ def analyze(data: AnalyzeRequest):
         })
 
     # -----------------------------
-    # SCORE ENGINE
+    # SIMPLE SCORE (NO HANG LOGIC)
     # -----------------------------
-    score = min(total_jobs * 6, 100)
+    score = min(total_jobs * 10, 100)
 
     # -----------------------------
-    # GROQ PROMPT
+    # FAST PROMPT (LIMIT TOKENS)
     # -----------------------------
     prompt = f"""
-User Profile:
 Skills: {data.skills}
 Role: {data.role}
 Country: {data.country}
+Jobs found: {total_jobs}
+Score: {score}
 
-Market Data:
-Total Jobs Found: {total_jobs}
-Market Score: {score}
-
-Break down:
-1. Market demand
-2. Skill gaps
-3. What to learn next (step-by-step roadmap)
-4. Job targeting strategy
-5. One motivational insight
+Give:
+- Market demand
+- Skill gap
+- 3 next steps
+- Job strategy
+Keep it short.
 """
 
     ai_insight = generate_ai_insight(prompt)
 
     # -----------------------------
-    # FINAL RESPONSE (SAA S LEVEL)
+    # FINAL RESPONSE
     # -----------------------------
     return {
         "profile": {
@@ -156,11 +158,9 @@ Break down:
         },
         "market_data": {
             "total_jobs_found": total_jobs,
-            "market_score": score,
-            "status": "Live Adzuna Data"
+            "market_score": score
         },
         "skill_breakdown": breakdown,
         "ai_insight": ai_insight,
-        "engine": "Groq (LLaMA 3.1)",
         "status": "success"
     }
