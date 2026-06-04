@@ -1,41 +1,31 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+import os
 
-# -----------------------------
-# APP INIT
-# -----------------------------
-app = FastAPI(title="AI Global Career Navigator")
+app = FastAPI(title="AI Career Intelligence API")
 
-# -----------------------------
-# CORS FIX (frontend connection)
-# -----------------------------
+# CORS (IMPORTANT for Streamlit connection)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # later replace with your frontend URL
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# -----------------------------
-# REQUEST MODEL
-# -----------------------------
+# Request schema
 class AnalyzeRequest(BaseModel):
     skills: str
     role: str
     country: str
 
-# -----------------------------
-# ROOT CHECK
-# -----------------------------
+
 @app.get("/")
 def home():
-    return {"status": "AI Global Career Navigator Running 🚀"}
+    return {"status": "AI Career API Running 🚀"}
 
-# -----------------------------
-# CAREER ANALYSIS ENDPOINT
-# -----------------------------
+
 @app.post("/analyze")
 def analyze(data: AnalyzeRequest):
 
@@ -44,49 +34,38 @@ def analyze(data: AnalyzeRequest):
     country = data.country.lower()
 
     score = 0
-    matched_skills = []
+    matched = []
 
-    # -----------------------------
-    # HR / Talent Domain Skills
-    # -----------------------------
+    # Skills logic
     if "talent acquisition" in skills:
         score += 20
-        matched_skills.append("Talent Acquisition")
+        matched.append("Talent Acquisition")
 
     if "stakeholder" in skills:
         score += 15
-        matched_skills.append("Stakeholder Management")
+        matched.append("Stakeholder Management")
 
     if "hrms" in skills:
         score += 15
-        matched_skills.append("HRMS")
+        matched.append("HRMS")
 
     if "hris" in skills:
         score += 15
-        matched_skills.append("HRIS")
+        matched.append("HRIS")
 
     if "erp" in skills:
         score += 10
-        matched_skills.append("ERP Systems")
+        matched.append("ERP")
 
-    # -----------------------------
-    # Analytics / Tech Skills
-    # -----------------------------
     if "powerbi" in skills or "power bi" in skills:
         score += 25
-        matched_skills.append("Power BI")
-
-    if "excel" in skills:
-        score += 10
-        matched_skills.append("Excel Analytics")
+        matched.append("Power BI")
 
     if "sql" in skills:
         score += 15
-        matched_skills.append("SQL")
+        matched.append("SQL")
 
-    # -----------------------------
-    # Role-based boost
-    # -----------------------------
+    # Role boost
     if "analyst" in role:
         score += 10
 
@@ -96,19 +75,13 @@ def analyze(data: AnalyzeRequest):
     if "data" in role:
         score += 15
 
-    # -----------------------------
-    # Country boost (simple logic)
-    # -----------------------------
+    # Country boost
     if country == "usa":
         score += 10
-    elif country == "india":
-        score += 5
 
-    # -----------------------------
-    # FINAL DECISION LOGIC
-    # -----------------------------
+    # Final decision
     if score >= 80:
-        recommendation = "Excellent match for Global HR / People Analytics roles"
+        recommendation = "Excellent match for global HR / Analytics roles"
     elif score >= 60:
         recommendation = "Strong match for HR Analytics roles"
     elif score >= 40:
@@ -116,12 +89,15 @@ def analyze(data: AnalyzeRequest):
     else:
         recommendation = "Needs significant upskilling"
 
-    # -----------------------------
-    # RESPONSE
-    # -----------------------------
     return {
         "input": data,
         "match_score": score,
-        "matched_skills": matched_skills,
+        "matched_skills": matched,
         "recommendation": recommendation
     }
+
+
+# Run locally (optional)
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
