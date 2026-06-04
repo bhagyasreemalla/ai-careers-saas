@@ -6,152 +6,95 @@ import axios from "axios";
 export default function Home() {
   const [skills, setSkills] = useState("");
   const [role, setRole] = useState("");
-  const [country, setCountry] = useState("us");
-
+  const [country, setCountry] = useState("");
+  const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
-  const [error, setError] = useState("");
 
-  const analyzeCareer = async () => {
+  const analyze = async () => {
     setLoading(true);
-    setError("");
-    setResult(null);
+    setData(null);
 
     try {
-      const response = await axios.post(
-        "https://ai-career-saas.onrender.com/analyze",
-        {
-          skills,
-          role,
-          country,
-        }
-      );
+      const res = await axios.post("http://localhost:8000/analyze", {
+        skills,
+        role,
+        country,
+      });
 
-      setResult(response.data);
+      setData(res.data);
     } catch (err) {
-      setError("❌ Backend not reachable. Is FastAPI running?");
+      console.log(err);
+      alert("Backend not reachable");
     }
 
     setLoading(false);
   };
 
   return (
-    <div style={styles.container}>
-      <h1 style={styles.title}>🚀 AI Career SaaS (LIVE Market Data)</h1>
+    <div style={{ padding: 30, fontFamily: "Arial" }}>
+      
+      <h1 style={{ fontSize: 28, fontWeight: "bold" }}>
+        🚀 AI Career Intelligence SaaS
+      </h1>
 
-      <p style={styles.subtitle}>
-        Real-time job market insights powered by Adzuna API
-      </p>
+      <p>Real-time job market + AI career advisor</p>
 
-      <div style={styles.card}>
+      <div style={{ marginTop: 20 }}>
         <input
-          style={styles.input}
-          placeholder="Skills (e.g. Python, SQL, Power BI)"
+          placeholder="Skills (python, sql)"
           value={skills}
           onChange={(e) => setSkills(e.target.value)}
+          style={{ padding: 10, marginRight: 10 }}
         />
 
         <input
-          style={styles.input}
-          placeholder="Role (e.g. Data Analyst)"
+          placeholder="Role"
           value={role}
           onChange={(e) => setRole(e.target.value)}
+          style={{ padding: 10, marginRight: 10 }}
         />
 
         <input
-          style={styles.input}
-          placeholder="Country (us, in, uk)"
+          placeholder="Country (us, de, in)"
           value={country}
           onChange={(e) => setCountry(e.target.value)}
+          style={{ padding: 10 }}
         />
-
-        <button style={styles.button} onClick={analyzeCareer}>
-          {loading ? "Analyzing Live Market..." : "Analyze Career 🚀"}
-        </button>
-
-        {error && <p style={styles.error}>{error}</p>}
       </div>
 
-      {result && (
-        <div style={styles.resultCard}>
-          <h2>📊 Match Score: {result.match_score}</h2>
-          <h3>💡 {result.recommendation}</h3>
-          <p>🔥 Total Jobs Found: {result.total_jobs_found}</p>
+      <button
+        onClick={analyze}
+        style={{
+          marginTop: 20,
+          padding: "10px 20px",
+          background: "black",
+          color: "white",
+          cursor: "pointer",
+        }}
+      >
+        {loading ? "Analyzing..." : "Analyze"}
+      </button>
 
-          <h3>📌 Skill Breakdown (Live Data)</h3>
+      {/* RESULTS */}
+      {data && (
+        <div style={{ marginTop: 30 }}>
 
-          {result.skill_breakdown?.map((item: any, index: number) => (
-            <div key={index} style={styles.skillBox}>
-              <h4>🔹 {item.skill}</h4>
-              <p>Jobs Found: {item.job_count}</p>
+          <h2>📊 Market Score: {data.market_data.market_score}</h2>
+          <h3>Jobs Found: {data.market_data.total_jobs_found}</h3>
 
-              <ul>
-                {item.top_jobs?.map((job: any, i: number) => (
-                  <li key={i}>
-                    {job.title} — {job.company} ({job.location})
-                  </li>
-                ))}
-              </ul>
+          <h2 style={{ marginTop: 20 }}>🤖 AI Insight</h2>
+          <p>{data.ai_insight}</p>
+
+          <h2 style={{ marginTop: 20 }}>📌 Skill Breakdown</h2>
+
+          {data.skill_breakdown.map((s: any, i: number) => (
+            <div key={i} style={{ marginBottom: 10 }}>
+              <b>{s.skill}</b> — {s.job_count} jobs
             </div>
           ))}
+
         </div>
       )}
     </div>
   );
 }
-
-const styles: any = {
-  container: {
-    padding: 30,
-    fontFamily: "Arial",
-    background: "#0f172a",
-    minHeight: "100vh",
-    color: "white",
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "bold",
-  },
-  subtitle: {
-    color: "#94a3b8",
-    marginBottom: 20,
-  },
-  card: {
-    background: "#1e293b",
-    padding: 20,
-    borderRadius: 12,
-    maxWidth: 500,
-  },
-  input: {
-    width: "100%",
-    padding: 10,
-    marginBottom: 10,
-    borderRadius: 8,
-    border: "none",
-  },
-  button: {
-    width: "100%",
-    padding: 12,
-    background: "#38bdf8",
-    border: "none",
-    borderRadius: 8,
-    cursor: "pointer",
-    fontWeight: "bold",
-  },
-  resultCard: {
-    marginTop: 20,
-    padding: 20,
-    background: "#111827",
-    borderRadius: 12,
-  },
-  skillBox: {
-    marginTop: 15,
-    padding: 10,
-    background: "#1f2937",
-    borderRadius: 10,
-  },
-  error: {
-    color: "red",
-    marginTop: 10,
-  },
-};
