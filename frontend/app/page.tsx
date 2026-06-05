@@ -1,5 +1,7 @@
 "use client";
-
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell
+} from "recharts";
 import { useState } from "react";
 
 export default function Home() {
