@@ -5,228 +5,223 @@ import { useState } from "react";
 export default function Home() {
   const [skills, setSkills] = useState("");
   const [role, setRole] = useState("");
-  const [country, setCountry] = useState("us");
-  const [result, setResult] = useState<any>(null);
+  const [country, setCountry] = useState("");
+
+  const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
-  const analyzeCareer = async () => {
+  const analyze = async () => {
     try {
       setLoading(true);
-      setResult(null);
+      setData(null);
 
-      const response = await fetch("http://127.0.0.1:8000/analyze", {
+      const res = await fetch("http://127.0.0.1:8000/analyze", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          skills,
-          role,
-          country,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ skills, role, country }),
       });
 
-      const data = await response.json();
-      setResult(data);
-    } catch (error) {
-      console.error(error);
-      alert("Backend connection failed");
+      const json = await res.json();
+      setData(json);
+    } catch (err) {
+      alert("Backend not reachable");
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <main
-      style={{
-        maxWidth: "1200px",
-        margin: "0 auto",
-        padding: "40px",
-        fontFamily: "Arial, sans-serif",
-      }}
-    >
-      <h1>🚀 AI Global Career Navigator</h1>
+    <main style={styles.container}>
+      <h1 style={styles.title}>🚀 AI Career SaaS Dashboard</h1>
 
-      <p>
-        Live labor market intelligence powered by Adzuna + Groq AI
-      </p>
-
-      <div
-        style={{
-          display: "flex",
-          gap: "10px",
-          flexWrap: "wrap",
-          marginTop: "20px",
-        }}
-      >
+      {/* INPUTS */}
+      <div style={styles.inputRow}>
         <input
-          placeholder="Skills (python, sql, power bi)"
+          placeholder="Skills (python, sql)"
           value={skills}
           onChange={(e) => setSkills(e.target.value)}
-          style={{
-            padding: "10px",
-            width: "280px",
-          }}
+          style={styles.input}
         />
 
         <input
-          placeholder="Target Role"
+          placeholder="Role"
           value={role}
           onChange={(e) => setRole(e.target.value)}
-          style={{
-            padding: "10px",
-            width: "250px",
-          }}
+          style={styles.input}
         />
 
-        <select
+        <input
+          placeholder="Country (us, gb, de)"
           value={country}
           onChange={(e) => setCountry(e.target.value)}
-          style={{
-            padding: "10px",
-            width: "220px",
-          }}
-        >
-          <option value="us">United States</option>
-          <option value="gb">United Kingdom</option>
-          <option value="de">Germany</option>
-          <option value="in">India</option>
-          <option value="ca">Canada</option>
-          <option value="au">Australia</option>
-        </select>
+          style={styles.input}
+        />
+
+        <button onClick={analyze} style={styles.button}>
+          {loading ? "Analyzing..." : "Analyze"}
+        </button>
       </div>
 
-      <button
-        onClick={analyzeCareer}
-        disabled={loading}
-        style={{
-          marginTop: "20px",
-          padding: "12px 24px",
-          cursor: "pointer",
-          borderRadius: "8px",
-        }}
-      >
-        {loading ? "Analyzing..." : "Analyze Career Market"}
-      </button>
+      {/* KPI CARDS */}
+      {data && (
+        <div style={styles.cardsRow}>
+          <Card title="Market Score" value={data.market_data?.market_score} />
+          <Card title="Jobs Found" value={data.market_data?.total_jobs_found} />
+          <Card title="Avg Salary" value={data.salary_data?.average_salary || 0} />
+        </div>
+      )}
 
-      {result && (
-        <>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
-              gap: "20px",
-              marginTop: "40px",
-            }}
-          >
-            <div
-              style={{
-                border: "1px solid #ddd",
-                borderRadius: "12px",
-                padding: "20px",
-              }}
-            >
-              <h3>📈 Market Score</h3>
-              <h1>{result.market_data?.market_score}</h1>
-            </div>
-
-            <div
-              style={{
-                border: "1px solid #ddd",
-                borderRadius: "12px",
-                padding: "20px",
-              }}
-            >
-              <h3>💼 Jobs Found</h3>
-              <h1>{result.market_data?.total_jobs_found}</h1>
-            </div>
+      {/* MAIN GRID */}
+      {data && (
+        <div style={styles.grid}>
+          {/* AI INSIGHT */}
+          <div style={styles.panel}>
+            <h2>🧠 AI Career Strategy</h2>
+            <pre style={styles.pre}>{data.ai_insight}</pre>
           </div>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "20px",
-              marginTop: "30px",
-            }}
-          >
-            <div
-              style={{
-                border: "1px solid #ddd",
-                borderRadius: "12px",
-                padding: "20px",
-              }}
-            >
-              <h2>🏢 Top Hiring Companies</h2>
-
-              <ul>
-                {result.market_data?.top_companies?.map(
-                  (company: string, index: number) => (
-                    <li key={index}>{company}</li>
-                  )
-                )}
-              </ul>
-            </div>
-
-            <div
-              style={{
-                border: "1px solid #ddd",
-                borderRadius: "12px",
-                padding: "20px",
-              }}
-            >
-              <h2>📍 Top Hiring Locations</h2>
-
-              <ul>
-                {result.market_data?.top_locations?.map(
-                  (location: string, index: number) => (
-                    <li key={index}>{location}</li>
-                  )
-                )}
-              </ul>
-            </div>
+          {/* TOP COMPANIES */}
+          <div style={styles.panel}>
+            <h2>🏢 Top Companies</h2>
+            {data.market_data?.top_companies?.map((c: string, i: number) => (
+              <div key={i} style={styles.listItem}>{c}</div>
+            ))}
           </div>
 
-          <div
-            style={{
-              marginTop: "30px",
-              border: "1px solid #ddd",
-              borderRadius: "12px",
-              padding: "20px",
-            }}
-          >
-            <h2>🔥 Top Job Titles</h2>
-
-            <ul>
-              {result.market_data?.top_job_titles?.map(
-                (title: string, index: number) => (
-                  <li key={index}>{title}</li>
-                )
-              )}
-            </ul>
+          {/* TOP LOCATIONS */}
+          <div style={styles.panel}>
+            <h2>📍 Locations</h2>
+            {data.market_data?.top_locations?.map((l: string, i: number) => (
+              <div key={i} style={styles.listItem}>{l}</div>
+            ))}
           </div>
 
-          <div
-            style={{
-              marginTop: "30px",
-              border: "1px solid #ddd",
-              borderRadius: "12px",
-              padding: "20px",
-            }}
-          >
-            <h2>🤖 AI Career Strategy</h2>
-
-            <pre
-              style={{
-                whiteSpace: "pre-wrap",
-                fontFamily: "inherit",
-              }}
-            >
-              {result.ai_insight}
-            </pre>
+          {/* SKILL GAP */}
+          <div style={styles.panel}>
+            <h2>🎯 Skill Gap</h2>
+            {data.skill_gap_analysis?.missing_skills?.map((s: string, i: number) => (
+              <div key={i} style={styles.badge}>{s}</div>
+            ))}
           </div>
-        </>
+
+          {/* MARKET SKILLS */}
+          <div style={styles.panel}>
+            <h2>📊 Market Skills</h2>
+            {data.market_skills?.slice(0, 8).map((s: any, i: number) => (
+              <div key={i} style={styles.skillBar}>
+                <span>{s[0]}</span>
+                <div style={{ ...styles.bar, width: `${Math.min(s[1] * 10, 100)}%` }} />
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </main>
   );
 }
+
+/* ---------------- COMPONENT ---------------- */
+
+function Card({ title, value }: any) {
+  return (
+    <div style={styles.card}>
+      <h4>{title}</h4>
+      <h2>{value}</h2>
+    </div>
+  );
+}
+
+/* ---------------- STYLES ---------------- */
+
+const styles: any = {
+  container: {
+    padding: "30px",
+    fontFamily: "Arial",
+    background: "#f5f7fb",
+    minHeight: "100vh",
+  },
+
+  title: {
+    fontSize: "28px",
+    marginBottom: "20px",
+  },
+
+  inputRow: {
+    display: "flex",
+    gap: "10px",
+    flexWrap: "wrap",
+    marginBottom: "20px",
+  },
+
+  input: {
+    padding: "10px",
+    borderRadius: "8px",
+    border: "1px solid #ddd",
+    width: "200px",
+  },
+
+  button: {
+    padding: "10px 20px",
+    background: "#111",
+    color: "#fff",
+    borderRadius: "8px",
+    cursor: "pointer",
+  },
+
+  cardsRow: {
+    display: "flex",
+    gap: "15px",
+    marginBottom: "20px",
+  },
+
+  card: {
+    flex: 1,
+    background: "#fff",
+    padding: "15px",
+    borderRadius: "10px",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+  },
+
+  grid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "15px",
+  },
+
+  panel: {
+    background: "#fff",
+    padding: "15px",
+    borderRadius: "10px",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+  },
+
+  listItem: {
+    padding: "6px 0",
+    borderBottom: "1px solid #eee",
+  },
+
+  badge: {
+    display: "inline-block",
+    background: "#ffe8e8",
+    padding: "6px 10px",
+    margin: "5px",
+    borderRadius: "6px",
+  },
+
+  skillBar: {
+    marginBottom: "10px",
+  },
+
+  bar: {
+    height: "6px",
+    background: "#4f46e5",
+    borderRadius: "5px",
+    marginTop: "4px",
+  },
+
+  pre: {
+    whiteSpace: "pre-wrap",
+    fontSize: "13px",
+  },
+};
