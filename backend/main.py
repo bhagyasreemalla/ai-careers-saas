@@ -196,6 +196,7 @@ Avoid generic advice.
 @app.post("/analyze")
 def analyze(data: AnalyzeRequest):
 
+    print("COUNTRY RECEIVED:", data.country)
     skills = [
         s.strip()
         for s in data.skills.split(",")
