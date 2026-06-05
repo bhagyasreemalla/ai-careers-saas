@@ -66,9 +66,7 @@ def health():
 # --------------------------------------------------
 
 def get_jobs(skill: str, country: str):
-
     try:
-
         url = f"https://api.adzuna.com/v1/api/jobs/{country}/search/1"
 
         params = {
@@ -78,18 +76,12 @@ def get_jobs(skill: str, country: str):
             "results_per_page": 20
         }
 
-        response = requests.get(
-            url,
-            params=params,
-            timeout=15
-        )
+        response = requests.get(url, params=params, timeout=15)
 
         if response.status_code != 200:
-            print("Adzuna status:", response.status_code)
             return []
 
         data = response.json()
-
         return data.get("results", [])
 
     except Exception as e:
@@ -97,47 +89,23 @@ def get_jobs(skill: str, country: str):
         return []
 
 # --------------------------------------------------
-# TEST ADZUNA
-# --------------------------------------------------
-
-@app.get("/test-adzuna")
-def test_adzuna():
-
-    jobs = get_jobs("python", "us")
-
-    return {
-        "jobs_found": len(jobs),
-        "sample_job": jobs[0] if jobs else None
-    }
-
-# --------------------------------------------------
 # AI
 # --------------------------------------------------
 
-def generate_ai_insight(
-    role,
-    country,
-    skills,
-    total_jobs,
-    companies,
-    locations,
-    titles
-):
-
+def generate_ai_insight(role, country, skills, total_jobs, companies, locations, titles, avg_salary, missing_skills):
     try:
 
         prompt = f"""
-You are a senior global labor market analyst.
+You are a senior global career strategist.
 
-Candidate Profile:
+Candidate:
 Skills: {skills}
 Role: {role}
 Country: {country}
 
-Live Market Data:
-
-Jobs Found:
-{total_jobs}
+Market Data:
+Jobs Found: {total_jobs}
+Average Salary: {avg_salary}
 
 Top Companies:
 {companies}
@@ -148,19 +116,19 @@ Top Locations:
 Top Job Titles:
 {titles}
 
-Provide:
+Missing Skills:
+{missing_skills}
 
-1. Market Demand Score Explanation
+Give:
+1. Market Demand
 2. Career Outlook
 3. Skill Gaps
-4. Top 5 Skills To Learn
-5. 90-Day Career Roadmap
-6. Resume Recommendations
-7. Interview Preparation Tips
+4. Top Skills To Learn
+5. 90-Day Roadmap
+6. Resume Tips
+7. Interview Strategy
 
-Use bullet points.
-Use market data.
-Avoid generic advice.
+Be practical and data-driven.
 """
 
         response = client.chat.completions.create(
@@ -168,7 +136,7 @@ Avoid generic advice.
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a labor market intelligence expert."
+                    "content": "You are a labor market expert."
                 },
                 {
                     "role": "user",
@@ -182,13 +150,7 @@ Avoid generic advice.
         return response.choices[0].message.content
 
     except Exception as e:
-
-        print("===================================")
-        print("GROQ ERROR:")
-        print(str(e))
-        print("===================================")
-
-        return str(e)
+        return f"Groq Error: {str(e)}"
 
 # --------------------------------------------------
 # ANALYZE
@@ -197,7 +159,6 @@ Avoid generic advice.
 @app.post("/analyze")
 def analyze(data: AnalyzeRequest):
 
-    print("COUNTRY RECEIVED:", data.country)
     skills = [
         s.strip()
         for s in data.skills.split(",")
@@ -205,34 +166,31 @@ def analyze(data: AnalyzeRequest):
     ]
 
     total_jobs = 0
-
     companies = []
     locations = []
     titles = []
+
+    salary_values = []
+
+    market_keywords = [
+        "python", "sql", "power bi", "tableau",
+        "aws", "azure", "snowflake", "excel",
+        "sap", "workday"
+    ]
+
+    market_skill_count = {k: 0 for k in market_keywords}
 
     skill_breakdown = []
 
     for skill in skills:
 
-        jobs = get_jobs(
-            skill,
-            data.country.lower()
-        )
-
+        jobs = get_jobs(skill, data.country.lower())
         total_jobs += len(jobs)
 
         for job in jobs:
 
-            company = (
-                job.get("company", {})
-                .get("display_name")
-            )
-
-            location = (
-                job.get("location", {})
-                .get("display_name")
-            )
-
+            company = job.get("company", {}).get("display_name")
+            location = job.get("location", {}).get("display_name")
             title = job.get("title")
 
             if company:
@@ -244,53 +202,67 @@ def analyze(data: AnalyzeRequest):
             if title:
                 titles.append(title)
 
+            # -------- SALARY --------
+            if job.get("salary_min"):
+                salary_values.append(job.get("salary_min"))
+            if job.get("salary_max"):
+                salary_values.append(job.get("salary_max"))
+
+            # -------- SKILL EXTRACTION --------
+            desc = job.get("description", "").lower()
+
+            for mk in market_keywords:
+                if mk in desc:
+                    market_skill_count[mk] += 1
+
         skill_breakdown.append({
             "skill": skill,
             "job_count": len(jobs),
             "top_jobs": [
                 {
                     "title": j.get("title"),
-                    "company": j.get(
-                        "company",
-                        {}
-                    ).get("display_name"),
-                    "location": j.get(
-                        "location",
-                        {}
-                    ).get("display_name")
+                    "company": j.get("company", {}).get("display_name"),
+                    "location": j.get("location", {}).get("display_name")
                 }
                 for j in jobs[:5]
             ]
         })
 
-    top_companies = [
-        x[0]
-        for x in Counter(companies).most_common(10)
-    ]
+    top_companies = [x[0] for x in Counter(companies).most_common(10)]
+    top_locations = [x[0] for x in Counter(locations).most_common(10)]
+    top_titles = [x[0] for x in Counter(titles).most_common(10)]
 
-    top_locations = [
-        x[0]
-        for x in Counter(locations).most_common(10)
-    ]
+    # -------- SALARY CALC --------
+    avg_salary = 0
+    if salary_values:
+        avg_salary = round(sum(salary_values) / len(salary_values))
 
-    top_titles = [
-        x[0]
-        for x in Counter(titles).most_common(10)
-    ]
-
-    market_score = min(
-        int(total_jobs * 2),
-        100
+    # -------- MARKET SKILLS --------
+    top_market_skills = sorted(
+        market_skill_count.items(),
+        key=lambda x: x[1],
+        reverse=True
     )
 
+    user_skills = [s.lower() for s in data.skills.split(",")]
+
+    missing_skills = [
+        k for k, v in top_market_skills[:5]
+        if v > 0 and k not in user_skills
+    ]
+
+    market_score = min(int(total_jobs * 2), 100)
+
     ai_insight = generate_ai_insight(
-        role=data.role,
-        country=data.country,
-        skills=data.skills,
-        total_jobs=total_jobs,
-        companies=top_companies,
-        locations=top_locations,
-        titles=top_titles
+        data.role,
+        data.country,
+        data.skills,
+        total_jobs,
+        top_companies,
+        top_locations,
+        top_titles,
+        avg_salary,
+        missing_skills
     )
 
     return {
@@ -308,6 +280,16 @@ def analyze(data: AnalyzeRequest):
             "top_companies": top_companies,
             "top_locations": top_locations,
             "top_job_titles": top_titles
+        },
+
+        "salary_data": {
+            "average_salary": avg_salary
+        },
+
+        "market_skills": top_market_skills,
+
+        "skill_gap_analysis": {
+            "missing_skills": missing_skills
         },
 
         "skill_breakdown": skill_breakdown,
