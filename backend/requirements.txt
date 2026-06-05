@@ -1,7 +1,6 @@
 fastapi
 uvicorn
-streamlit
 requests
-protobuf
-openai
+python-dotenv
+groq
 pydantic
