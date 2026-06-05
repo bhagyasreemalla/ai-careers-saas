@@ -3,12 +3,28 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from groq import Groq
+from collections import Counter
 import requests
 import os
 
+# --------------------------------------------------
+# ENV
+# --------------------------------------------------
+
 load_dotenv()
 
-app = FastAPI(title="AI Career SaaS")
+ADZUNA_APP_ID = os.getenv("ADZUNA_APP_ID")
+ADZUNA_APP_KEY = os.getenv("ADZUNA_APP_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+
+# --------------------------------------------------
+# APP
+# --------------------------------------------------
+
+app = FastAPI(
+    title="AI Global Career Navigator",
+    version="1.0"
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -18,43 +34,57 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-ADZUNA_APP_ID = os.getenv("ADZUNA_APP_ID")
-ADZUNA_APP_KEY = os.getenv("ADZUNA_APP_KEY")
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+# --------------------------------------------------
+# GROQ
+# --------------------------------------------------
 
 client = Groq(api_key=GROQ_API_KEY)
 
+# --------------------------------------------------
+# MODEL
+# --------------------------------------------------
 
 class AnalyzeRequest(BaseModel):
     skills: str
     role: str
     country: str
 
+# --------------------------------------------------
+# HEALTH
+# --------------------------------------------------
 
 @app.get("/")
 def health():
-    return {"status": "AI Career SaaS Running 🚀"}
+    return {
+        "status": "running",
+        "service": "AI Global Career Navigator"
+    }
 
+# --------------------------------------------------
+# ADZUNA
+# --------------------------------------------------
 
-def get_jobs(skill, country):
+def get_jobs(skill: str, country: str):
+
     try:
+
         url = f"https://api.adzuna.com/v1/api/jobs/{country}/search/1"
 
         params = {
             "app_id": ADZUNA_APP_ID,
             "app_key": ADZUNA_APP_KEY,
             "what": skill,
-            "results_per_page": 20,
-            "content-type": "application/json"
+            "results_per_page": 20
         }
 
         response = requests.get(
             url,
             params=params,
-            timeout=10
+            timeout=15
         )
 
         if response.status_code != 200:
+            print("Adzuna status:", response.status_code)
             return []
 
         data = response.json()
@@ -62,91 +92,130 @@ def get_jobs(skill, country):
         return data.get("results", [])
 
     except Exception as e:
-        print("Adzuna error:", e)
+        print("Adzuna Error:", str(e))
         return []
 
+# --------------------------------------------------
+# TEST ADZUNA
+# --------------------------------------------------
+
+@app.get("/test-adzuna")
+def test_adzuna():
+
+    jobs = get_jobs("python", "us")
+
+    return {
+        "jobs_found": len(jobs),
+        "sample_job": jobs[0] if jobs else None
+    }
+
+# --------------------------------------------------
+# AI
+# --------------------------------------------------
 
 def generate_ai_insight(
     role,
     country,
     skills,
     total_jobs,
-    top_companies,
-    top_locations,
+    companies,
+    locations,
+    titles
 ):
+
     try:
 
         prompt = f"""
-You are an expert global career advisor.
+You are a senior global labor market analyst.
 
-Candidate Skills:
-{skills}
-
-Target Role:
-{role}
-
-Country:
-{country}
+Candidate Profile:
+Skills: {skills}
+Role: {role}
+Country: {country}
 
 Live Market Data:
-Jobs Found: {total_jobs}
 
-Top Hiring Companies:
-{", ".join(top_companies)}
+Jobs Found:
+{total_jobs}
 
-Top Hiring Locations:
-{", ".join(top_locations)}
+Top Companies:
+{companies}
 
-Create:
+Top Locations:
+{locations}
 
-1. Market Demand Summary
-2. Skill Gap Analysis
-3. Top 5 Skills To Learn
-4. Career Roadmap (90 Days)
-5. Job Search Strategy
-6. Resume Improvement Tips
+Top Job Titles:
+{titles}
 
-Make it practical and professional.
+Provide:
+
+1. Market Demand Score Explanation
+2. Career Outlook
+3. Skill Gaps
+4. Top 5 Skills To Learn
+5. 90-Day Career Roadmap
+6. Resume Recommendations
+7. Interview Preparation Tips
+
+Use bullet points.
+Use market data.
+Avoid generic advice.
 """
 
-        completion = client.chat.completions.create(
+        response = client.chat.completions.create(
             model="llama-3.1-70b-versatile",
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a senior global career strategist."
+                    "content": "You are a labor market intelligence expert."
                 },
                 {
                     "role": "user",
                     "content": prompt
                 }
             ],
-            temperature=0.7,
+            temperature=0.5,
             max_tokens=1200
         )
 
-        return completion.choices[0].message.content
+        return response.choices[0].message.content
 
     except Exception as e:
-        print("Groq error:", e)
-        return "AI insight unavailable."
 
+        print("Groq Error:", str(e))
+
+        return (
+            "AI insight unavailable. "
+            "Check Groq API key and usage limits."
+        )
+
+# --------------------------------------------------
+# ANALYZE
+# --------------------------------------------------
 
 @app.post("/analyze")
 def analyze(data: AnalyzeRequest):
 
-    skills = [s.strip() for s in data.skills.split(",")]
+    skills = [
+        s.strip()
+        for s in data.skills.split(",")
+        if s.strip()
+    ]
 
     total_jobs = 0
 
     companies = []
     locations = []
+    titles = []
 
     skill_breakdown = []
 
     for skill in skills:
 
-        jobs = get_jobs(skill, data.country)
+        jobs = get_jobs(
+            skill,
+            data.country.lower()
+        )
 
         total_jobs += len(jobs)
 
@@ -162,11 +231,16 @@ def analyze(data: AnalyzeRequest):
                 .get("display_name")
             )
 
+            title = job.get("title")
+
             if company:
                 companies.append(company)
 
             if location:
                 locations.append(location)
+
+            if title:
+                titles.append(title)
 
         skill_breakdown.append({
             "skill": skill,
@@ -181,22 +255,29 @@ def analyze(data: AnalyzeRequest):
                     "location": j.get(
                         "location",
                         {}
-                    ).get("display_name"),
+                    ).get("display_name")
                 }
                 for j in jobs[:5]
             ]
         })
 
-    top_companies = list(
-        dict.fromkeys(companies)
-    )[:10]
+    top_companies = [
+        x[0]
+        for x in Counter(companies).most_common(10)
+    ]
 
-    top_locations = list(
-        dict.fromkeys(locations)
-    )[:10]
+    top_locations = [
+        x[0]
+        for x in Counter(locations).most_common(10)
+    ]
+
+    top_titles = [
+        x[0]
+        for x in Counter(titles).most_common(10)
+    ]
 
     market_score = min(
-        round(total_jobs * 2),
+        int(total_jobs * 2),
         100
     )
 
@@ -205,24 +286,31 @@ def analyze(data: AnalyzeRequest):
         country=data.country,
         skills=data.skills,
         total_jobs=total_jobs,
-        top_companies=top_companies,
-        top_locations=top_locations,
+        companies=top_companies,
+        locations=top_locations,
+        titles=top_titles
     )
 
     return {
         "status": "success",
+
         "profile": {
             "skills": data.skills,
             "role": data.role,
-            "country": data.country,
+            "country": data.country
         },
+
         "market_data": {
             "market_score": market_score,
             "total_jobs_found": total_jobs,
             "top_companies": top_companies,
             "top_locations": top_locations,
+            "top_job_titles": top_titles
         },
+
         "skill_breakdown": skill_breakdown,
+
         "ai_insight": ai_insight,
-        "data_source": "Adzuna + Groq AI"
+
+        "data_source": "Live Adzuna + Groq"
     }
