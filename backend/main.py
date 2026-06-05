@@ -4,8 +4,10 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 from groq import Groq
 from collections import Counter
+from uuid import uuid4
 import requests
 import os
+import time
 
 # ----------------------------
 # ENV
@@ -16,12 +18,12 @@ ADZUNA_APP_ID = os.getenv("ADZUNA_APP_ID")
 ADZUNA_APP_KEY = os.getenv("ADZUNA_APP_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
-print("GROQ KEY LOADED:", bool(GROQ_API_KEY))
+client = Groq(api_key=GROQ_API_KEY)
 
 # ----------------------------
 # APP
 # ----------------------------
-app = FastAPI(title="AI Global Career Navigator")
+app = FastAPI(title="AI Global Career Navigator SaaS V3")
 
 app.add_middleware(
     CORSMiddleware,
@@ -32,14 +34,15 @@ app.add_middleware(
 )
 
 # ----------------------------
-# GROQ CLIENT
+# SIMPLE IN-MEMORY DATABASE
 # ----------------------------
-client = Groq(api_key=GROQ_API_KEY)
+db = {}
 
 # ----------------------------
 # REQUEST MODEL
 # ----------------------------
 class AnalyzeRequest(BaseModel):
+    user_id: str | None = None
     skills: str
     role: str
     country: str
@@ -49,7 +52,7 @@ class AnalyzeRequest(BaseModel):
 # ----------------------------
 @app.get("/")
 def health():
-    return {"status": "running"}
+    return {"status": "running", "version": "saas-v3"}
 
 # ----------------------------
 # ADZUNA API
@@ -65,29 +68,49 @@ def get_jobs(skill: str, country: str):
             "results_per_page": 20
         }
 
-        response = requests.get(url, params=params, timeout=10)
+        r = requests.get(url, params=params, timeout=10)
 
-        if response.status_code != 200:
+        if r.status_code != 200:
             return []
 
-        data = response.json()
-        return data.get("results", [])
+        return r.json().get("results", [])
 
-    except Exception as e:
-        print("Adzuna error:", e)
+    except:
         return []
 
 # ----------------------------
-# TEST ENDPOINT
+# AI INSIGHT ENGINE
 # ----------------------------
-@app.get("/test-adzuna")
-def test_adzuna():
-    jobs = get_jobs("python", "us")
+def generate_ai_insight(skills, role, total_jobs, companies):
+    try:
+        prompt = f"""
+You are a senior career AI advisor.
 
-    return {
-        "jobs_found": len(jobs),
-        "sample_job": jobs[0] if jobs else None
-    }
+Skills: {skills}
+Role: {role}
+Market Jobs: {total_jobs}
+Top Companies: {companies[:5]}
+
+Return:
+- Career Summary
+- Skill Gaps
+- 30-Day Roadmap
+- Hiring Probability
+Keep it short and structured.
+"""
+
+        res = client.chat.completions.create(
+            model="llama3-70b-8192",
+            messages=[
+                {"role": "system", "content": "You are a career strategist AI."},
+                {"role": "user", "content": prompt}
+            ]
+        )
+
+        return res.choices[0].message.content
+
+    except:
+        return "AI temporarily unavailable."
 
 # ----------------------------
 # ANALYZE API
@@ -97,10 +120,11 @@ def analyze(data: AnalyzeRequest):
 
     skills = [s.strip() for s in data.skills.split(",") if s.strip()]
 
+    if not skills:
+        return {"error": "No skills provided"}
+
     total_jobs = 0
-    companies = []
-    locations = []
-    titles = []
+    companies, locations, titles = [], [], []
 
     skill_breakdown = []
 
@@ -108,29 +132,14 @@ def analyze(data: AnalyzeRequest):
         jobs = get_jobs(skill, data.country.lower())
         total_jobs += len(jobs)
 
-        for job in jobs:
-            company = job.get("company", {}).get("display_name")
-            location = job.get("location", {}).get("display_name")
-            title = job.get("title")
-
-            if company:
-                companies.append(company)
-            if location:
-                locations.append(location)
-            if title:
-                titles.append(title)
+        for j in jobs:
+            companies.append(j.get("company", {}).get("display_name", "Unknown"))
+            locations.append(j.get("location", {}).get("display_name", "Unknown"))
+            titles.append(j.get("title", "Unknown"))
 
         skill_breakdown.append({
             "skill": skill,
-            "job_count": len(jobs),
-            "top_jobs": [
-                {
-                    "title": j.get("title"),
-                    "company": j.get("company", {}).get("display_name"),
-                    "location": j.get("location", {}).get("display_name")
-                }
-                for j in jobs[:5]
-            ]
+            "job_count": len(jobs)
         })
 
     top_companies = [x[0] for x in Counter(companies).most_common(10)]
@@ -139,8 +148,21 @@ def analyze(data: AnalyzeRequest):
 
     market_score = min(total_jobs * 2, 100)
 
-    return {
-        "status": "success",
+    ai_insight = generate_ai_insight(
+        data.skills,
+        data.role,
+        total_jobs,
+        top_companies
+    )
+
+    # ----------------------------
+    # SAAS V3: SAVE REPORT
+    # ----------------------------
+    report_id = str(uuid4())
+    user_id = data.user_id or "guest"
+
+    report = {
+        "report_id": report_id,
         "profile": data.dict(),
         "market_data": {
             "market_score": market_score,
@@ -150,5 +172,31 @@ def analyze(data: AnalyzeRequest):
             "top_job_titles": top_titles
         },
         "skill_breakdown": skill_breakdown,
-        "data_source": "Adzuna API"
+        "ai_insight": ai_insight,
+        "timestamp": time.time()
+    }
+
+    if user_id not in db:
+        db[user_id] = []
+
+    db[user_id].append(report)
+
+    return {
+        "status": "success",
+        "report_id": report_id,
+        "profile": data.dict(),
+        "market_data": report["market_data"],
+        "skill_breakdown": skill_breakdown,
+        "ai_insight": ai_insight,
+        "version": "saas-v3"
+    }
+
+# ----------------------------
+# HISTORY API (SAAS FEATURE)
+# ----------------------------
+@app.get("/history/{user_id}")
+def history(user_id: str):
+    return {
+        "user_id": user_id,
+        "reports": db.get(user_id, [])
     }
