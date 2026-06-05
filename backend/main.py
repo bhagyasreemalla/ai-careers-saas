@@ -87,7 +87,13 @@ def get_jobs(skill: str, country: str):
     except Exception as e:
         print("Adzuna Error:", str(e))
         return []
-
+    @app.get("/test-adzuna")
+def test_adzuna():
+    jobs = get_jobs("python", "us")
+    return {
+        "jobs_found": len(jobs),
+        "sample_job": jobs[0] if jobs else None
+    }
 # --------------------------------------------------
 # AI
 # --------------------------------------------------
