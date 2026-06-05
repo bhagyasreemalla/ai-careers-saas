@@ -19,6 +19,7 @@ ADZUNA_APP_KEY = os.getenv("ADZUNA_APP_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 client = Groq(api_key=GROQ_API_KEY)
+print("GROQ KEY FOUND:", bool(GROQ_API_KEY))
 
 # ----------------------------
 # APP
@@ -82,6 +83,11 @@ def get_jobs(skill: str, country: str):
 # AI INSIGHT ENGINE
 # ----------------------------
 def generate_ai_insight(skills, role, total_jobs, companies):
+    print("\n==============================")
+    print("AI INSIGHT STARTED")
+    print("GROQ KEY FOUND:", bool(GROQ_API_KEY))
+    print("==============================\n")
+
     try:
         prompt = f"""
 You are a senior career AI advisor.
@@ -91,26 +97,47 @@ Role: {role}
 Market Jobs: {total_jobs}
 Top Companies: {companies[:5]}
 
-Return:
-- Career Summary
-- Skill Gaps
-- 30-Day Roadmap
-- Hiring Probability
-Keep it short and structured.
+Provide:
+
+1. Career Summary
+2. Skill Gap Analysis
+3. 30-Day Learning Roadmap
+4. Hiring Probability
+
+Keep the answer concise and practical.
 """
 
-        res = client.chat.completions.create(
-            model="llama3-70b-8192",
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
             messages=[
-                {"role": "system", "content": "You are a career strategist AI."},
-                {"role": "user", "content": prompt}
-            ]
+                {
+                    "role": "system",
+                    "content": "You are an expert career strategist."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            temperature=0.3,
         )
 
-        return res.choices[0].message.content
+        result = response.choices[0].message.content
 
-    except:
-        return "AI temporarily unavailable."
+        print("\n==============================")
+        print("GROQ SUCCESS")
+        print("==============================\n")
+
+        return result
+
+    except Exception as e:
+        print("\n==============================")
+        print("GROQ ERROR")
+        print(type(e).__name__)
+        print(str(e))
+        print("==============================\n")
+
+        return f"AI ERROR: {str(e)}"
 
 # ----------------------------
 # ANALYZE API
