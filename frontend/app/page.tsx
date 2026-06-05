@@ -9,7 +9,7 @@ export default function Home() {
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
-  const analyzeCareer = async () => {
+  async function analyzeCareer() {
     try {
       setLoading(true);
       setResult(null);
@@ -28,154 +28,71 @@ export default function Home() {
 
       const data = await response.json();
       setResult(data);
-    } catch (error) {
-      console.error(error);
-      alert("Cannot connect to backend.");
+    } catch (err) {
+      console.error(err);
+      alert("Backend connection failed");
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   return (
-    <main
-      style={{
-        padding: "40px",
-        fontFamily: "Arial, sans-serif",
-        maxWidth: "1000px",
-        margin: "0 auto",
-      }}
-    >
-      <h1>🚀 AI Career Navigator</h1>
+    <main style={{ maxWidth: 1000, margin: "auto", padding: 40 }}>
+      <h1>🚀 AI Global Career Navigator</h1>
 
       <p>
-        Real-time career intelligence powered by AI and live job market data.
+        Real-time career intelligence powered by AI and live labor-market data.
       </p>
 
-      <div
-        style={{
-          display: "flex",
-          gap: "10px",
-          marginTop: "20px",
-          flexWrap: "wrap",
-        }}
-      >
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
         <input
-          placeholder="Skills (python, sql)"
+          placeholder="Skills (Python, SQL, Power BI)"
           value={skills}
           onChange={(e) => setSkills(e.target.value)}
-          style={{ padding: "10px", width: "250px" }}
+          style={{ padding: 10, width: 250 }}
         />
 
         <input
           placeholder="Target Role"
           value={role}
           onChange={(e) => setRole(e.target.value)}
-          style={{ padding: "10px", width: "250px" }}
+          style={{ padding: 10, width: 250 }}
         />
 
         <input
-          placeholder="Country Code (us, gb, de)"
+          placeholder="Country (us, gb, de)"
           value={country}
           onChange={(e) => setCountry(e.target.value)}
-          style={{ padding: "10px", width: "200px" }}
+          style={{ padding: 10, width: 200 }}
         />
       </div>
 
       <button
         onClick={analyzeCareer}
-        disabled={loading}
         style={{
-          marginTop: "20px",
+          marginTop: 20,
           padding: "12px 24px",
           cursor: "pointer",
-          border: "none",
-          borderRadius: "8px",
         }}
       >
         {loading ? "Analyzing..." : "Analyze Career Market"}
       </button>
 
       {result && (
-        <div style={{ marginTop: "40px" }}>
-          <h2>📊 Market Analysis</h2>
+        <div style={{ marginTop: 40 }}>
+          <h2>Career Analysis</h2>
 
-          <div
+          <pre
             style={{
-              display: "flex",
-              gap: "20px",
-              flexWrap: "wrap",
-              marginTop: "20px",
+              background: "#111",
+              color: "#0f0",
+              padding: 20,
+              borderRadius: 10,
+              overflow: "auto",
             }}
           >
-            <div
-              style={{
-                border: "1px solid #ccc",
-                padding: "20px",
-                borderRadius: "10px",
-              }}
-            >
-              <h3>Market Score</h3>
-              <p>{result.market_data?.market_score}</p>
-            </div>
-
-            <div
-              style={{
-                border: "1px solid #ccc",
-                padding: "20px",
-                borderRadius: "10px",
-              }}
-            >
-              <h3>Jobs Found</h3>
-              <p>{result.market_data?.total_jobs_found}</p>
-            </div>
-          </div>
-
-          <h2 style={{ marginTop: "30px" }}>🤖 AI Career Insight</h2>
-
-          <div
-            style={{
-              border: "1px solid #ccc",
-              padding: "20px",
-              borderRadius: "10px",
-            }}
-          >
-            <pre
-              style={{
-                whiteSpace: "pre-wrap",
-                fontFamily: "inherit",
-              }}
-            >
-              {result.ai_insight}
-            </pre>
-          </div>
-
-          <h2 style={{ marginTop: "30px" }}>📌 Skill Breakdown</h2>
-
-          {result.skill_breakdown?.map((skill: any, index: number) => (
-            <div
-              key={index}
-              style={{
-                border: "1px solid #ccc",
-                marginBottom: "20px",
-                padding: "15px",
-                borderRadius: "10px",
-              }}
-            >
-              <h3>
-                {skill.skill} ({skill.job_count} jobs)
-              </h3>
-
-              {skill.top_jobs?.map((job: any, idx: number) => (
-                <div key={idx} style={{ marginTop: "10px" }}>
-                  <strong>{job.title}</strong>
-                  <br />
-                  {job.company}
-                  <br />
-                  {job.location}
-                </div>
-              ))}
-            </div>
-          ))}
+            {JSON.stringify(result, null, 2)}
+          </pre>
         </div>
       )}
     </main>
