@@ -13,6 +13,7 @@ import os
 
 load_dotenv()
 print("GROQ KEY FOUND:", bool(os.getenv("GROQ_API_KEY")))
+
 ADZUNA_APP_ID = os.getenv("ADZUNA_APP_ID")
 ADZUNA_APP_KEY = os.getenv("ADZUNA_APP_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
@@ -182,12 +183,12 @@ Avoid generic advice.
 
     except Exception as e:
 
-        print("Groq Error:", str(e))
+        print("===================================")
+        print("GROQ ERROR:")
+        print(str(e))
+        print("===================================")
 
-        return (
-            "AI insight unavailable. "
-            "Check Groq API key and usage limits."
-        )
+        return str(e)
 
 # --------------------------------------------------
 # ANALYZE
