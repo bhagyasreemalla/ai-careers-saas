@@ -1,7 +1,5 @@
 "use client";
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell
-} from "recharts";
+
 import { useState } from "react";
 
 export default function Home() {
@@ -11,15 +9,23 @@ export default function Home() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
+  const API_URL =
+    process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
   const analyze = async () => {
     setLoading(true);
     setData(null);
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/analyze", {
+      const res = await fetch(`${API_URL}/analyze`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ skills, role, country }),
+        body: JSON.stringify({
+          skills,
+          role,
+          country,
+          user_id: "demo-user-1"
+        }),
       });
 
       const json = await res.json();
@@ -33,13 +39,12 @@ export default function Home() {
 
   return (
     <div style={styles.page}>
-      
-      {/* LEFT SIDEBAR */}
+      {/* SIDEBAR */}
       <div style={styles.sidebar}>
-        <h2 style={{ color: "#0A66C2" }}>AI Career Navigator</h2>
+        <h2 style={styles.logo}>AI Career Navigator</h2>
 
         <input
-          placeholder="Skills (python, sql)"
+          placeholder="Skills"
           value={skills}
           onChange={(e) => setSkills(e.target.value)}
           style={styles.input}
@@ -53,65 +58,66 @@ export default function Home() {
         />
 
         <input
-          placeholder="Country (us, uk, de)"
+          placeholder="Country (us, in, uk)"
           value={country}
           onChange={(e) => setCountry(e.target.value)}
           style={styles.input}
         />
 
-        <button onClick={analyze} style={styles.button}>
-          {loading ? "Analyzing..." : "Run Market Analysis"}
+        <button onClick={analyze} style={styles.button} disabled={loading}>
+          {loading ? "Analyzing..." : "Run Analysis"}
         </button>
       </div>
 
-      {/* MAIN DASHBOARD */}
+      {/* MAIN */}
       <div style={styles.main}>
-
-        {!data && (
+        {!data && !loading && (
           <div style={styles.empty}>
-            <h2>🚀 Career Intelligence Dashboard</h2>
-            <p>Enter skills and run analysis to see real-time market insights</p>
+            <h1>🚀 AI Career Intelligence SaaS</h1>
+            <p>Analyze jobs, skills & career opportunities instantly</p>
+          </div>
+        )}
+
+        {loading && (
+          <div style={styles.loading}>
+            <div style={styles.spinner}></div>
+            <p>Analyzing job market...</p>
           </div>
         )}
 
         {data && (
           <>
-            {/* KPI CARDS */}
-            <div style={styles.cardRow}>
+            {/* CARDS */}
+            <div style={styles.cards}>
               <Card title="Market Score" value={data.market_data.market_score} />
               <Card title="Jobs Found" value={data.market_data.total_jobs_found} />
-              <Card title="Top Companies" value={data.market_data.top_companies.length} />
+              <Card title="Companies" value={data.market_data.top_companies.length} />
             </div>
 
-            {/* CONTENT GRID */}
             <div style={styles.grid}>
-
-              {/* LEFT: DATA */}
+              {/* LEFT */}
               <div style={styles.panel}>
-                <h3>📊 Top Companies</h3>
+                <h3>Top Companies</h3>
                 {data.market_data.top_companies.map((c: string, i: number) => (
-                  <div key={i} style={styles.listItem}>{c}</div>
+                  <div key={i} style={styles.item}>{c}</div>
                 ))}
 
-                <h3 style={{ marginTop: 20 }}>📍 Locations</h3>
+                <h3>Locations</h3>
                 {data.market_data.top_locations.map((l: string, i: number) => (
-                  <div key={i} style={styles.listItem}>{l}</div>
+                  <div key={i} style={styles.item}>{l}</div>
                 ))}
 
-                <h3 style={{ marginTop: 20 }}>💼 Job Titles</h3>
+                <h3>Job Titles</h3>
                 {data.market_data.top_job_titles.map((t: string, i: number) => (
-                  <div key={i} style={styles.listItem}>{t}</div>
+                  <div key={i} style={styles.item}>{t}</div>
                 ))}
               </div>
 
-              {/* RIGHT: AI PANEL */}
-              <div style={styles.aiPanel}>
-                <h3>🤖 AI Career Copilot</h3>
-                <pre style={styles.aiText}>
-                  {data.ai_insight}
-                </pre>
+              {/* AI */}
+              <div style={styles.ai}>
+                <h3>AI Career Copilot</h3>
+                <div style={styles.aiText}>{data.ai_insight}</div>
               </div>
-
             </div>
           </>
         )}
@@ -120,7 +126,7 @@ export default function Home() {
   );
 }
 
-/* ---------------- COMPONENT ---------------- */
+/* CARD */
 function Card({ title, value }: any) {
   return (
     <div style={styles.card}>
@@ -130,80 +136,72 @@ function Card({ title, value }: any) {
   );
 }
 
-/* ---------------- STYLES ---------------- */
+/* STYLES */
 const styles: any = {
   page: {
     display: "flex",
     height: "100vh",
     fontFamily: "Arial",
-    background: "#f3f6f9",
+    background: "linear-gradient(135deg,#eef2ff,#f8fafc)",
   },
 
   sidebar: {
-    width: "280px",
+    width: "300px",
     padding: "20px",
     background: "white",
-    borderRight: "1px solid #ddd",
+    borderRight: "1px solid #eee",
     display: "flex",
     flexDirection: "column",
     gap: "10px",
   },
 
+  logo: { color: "#0A66C2" },
+
   input: {
     padding: "10px",
     border: "1px solid #ccc",
-    borderRadius: "6px",
+    borderRadius: "8px",
   },
 
   button: {
-    marginTop: "10px",
     padding: "10px",
     background: "#0A66C2",
     color: "white",
     border: "none",
-    borderRadius: "6px",
+    borderRadius: "8px",
     cursor: "pointer",
   },
 
-  main: {
-    flex: 1,
-    padding: "20px",
-    overflowY: "auto",
+  main: { flex: 1, padding: "20px", overflowY: "auto" },
+
+  empty: { textAlign: "center", marginTop: "120px" },
+
+  loading: { textAlign: "center", marginTop: "120px" },
+
+  spinner: {
+    width: "40px",
+    height: "40px",
+    border: "4px solid #ddd",
+    borderTop: "4px solid #0A66C2",
+    borderRadius: "50%",
+    margin: "auto",
+    animation: "spin 1s linear infinite",
   },
 
-  empty: {
-    textAlign: "center",
-    marginTop: "100px",
-    color: "#666",
-  },
-
-  cardRow: {
-    display: "flex",
-    gap: "15px",
-    marginBottom: "20px",
-  },
+  cards: { display: "flex", gap: "10px", marginBottom: "20px" },
 
   card: {
     flex: 1,
     background: "white",
     padding: "15px",
     borderRadius: "10px",
-    boxShadow: "0 2px 5px rgba(0,0,0,0.05)",
   },
 
-  grid: {
-    display: "flex",
-    gap: "20px",
-  },
+  grid: { display: "flex", gap: "20px" },
 
-  panel: {
-    flex: 1,
-    background: "white",
-    padding: "15px",
-    borderRadius: "10px",
-  },
+  panel: { flex: 1, background: "white", padding: "15px", borderRadius: "10px" },
 
-  aiPanel: {
+  ai: {
     flex: 1,
     background: "#0A66C2",
     color: "white",
@@ -213,12 +211,24 @@ const styles: any = {
 
   aiText: {
     whiteSpace: "pre-wrap",
-    fontSize: "13px",
+    fontSize: "14px",
+    lineHeight: "1.6",
   },
 
-  listItem: {
+  item: {
     padding: "6px 0",
     borderBottom: "1px solid #eee",
-    fontSize: "14px",
   },
 };
+
+/* ANIMATION */
+if (typeof window !== "undefined") {
+  const style = document.createElement("style");
+  style.innerHTML = `
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  `;
+  document.head.appendChild(style);
+}
