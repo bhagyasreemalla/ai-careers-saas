@@ -9,9 +9,9 @@ import requests
 import os
 import time
 
-# ----------------------------
-# ENV
-# ----------------------------
+# ==================================
+# ENVIRONMENT
+# ==================================
 load_dotenv()
 
 ADZUNA_APP_ID = os.getenv("ADZUNA_APP_ID")
@@ -19,45 +19,58 @@ ADZUNA_APP_KEY = os.getenv("ADZUNA_APP_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 client = Groq(api_key=GROQ_API_KEY)
+
 print("GROQ KEY FOUND:", bool(GROQ_API_KEY))
 
-# ----------------------------
+# ==================================
 # APP
-# ----------------------------
-app = FastAPI(title="AI Global Career Navigator SaaS V3")
+# ==================================
+app = FastAPI(
+    title="AI Global Career Navigator",
+    version="saas-v4"
+)
 
+# ==================================
+# CORS
+# ==================================
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:3000",
+        "https://your-vercel-app.vercel.app"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ----------------------------
-# SIMPLE IN-MEMORY DATABASE
-# ----------------------------
+# ==================================
+# TEMP DATABASE
+# ==================================
 db = {}
 
-# ----------------------------
+# ==================================
 # REQUEST MODEL
-# ----------------------------
+# ==================================
 class AnalyzeRequest(BaseModel):
     user_id: str | None = None
     skills: str
     role: str
     country: str
 
-# ----------------------------
+# ==================================
 # HEALTH CHECK
-# ----------------------------
+# ==================================
 @app.get("/")
 def health():
-    return {"status": "running", "version": "saas-v3"}
+    return {
+        "status": "running",
+        "version": "saas-v4"
+    }
 
-# ----------------------------
-# ADZUNA API
-# ----------------------------
+# ==================================
+# ADZUNA
+# ==================================
 def get_jobs(skill: str, country: str):
     try:
         url = f"https://api.adzuna.com/v1/api/jobs/{country}/search/1"
@@ -69,114 +82,167 @@ def get_jobs(skill: str, country: str):
             "results_per_page": 20
         }
 
-        r = requests.get(url, params=params, timeout=10)
+        response = requests.get(
+            url,
+            params=params,
+            timeout=10
+        )
 
-        if r.status_code != 200:
+        if response.status_code != 200:
+            print("ADZUNA ERROR:", response.text)
             return []
 
-        return r.json().get("results", [])
+        return response.json().get("results", [])
 
-    except:
+    except Exception as e:
+        print("ADZUNA EXCEPTION:", str(e))
         return []
 
-# ----------------------------
-# AI INSIGHT ENGINE
-# ----------------------------
-def generate_ai_insight(skills, role, total_jobs, companies):
-    print("\n==============================")
-    print("AI INSIGHT STARTED")
-    print("GROQ KEY FOUND:", bool(GROQ_API_KEY))
-    print("==============================\n")
-
+# ==================================
+# AI INSIGHT
+# ==================================
+def generate_ai_insight(
+    skills,
+    role,
+    total_jobs,
+    companies
+):
     try:
-        prompt = f"""
-You are a senior career AI advisor.
 
-Skills: {skills}
-Role: {role}
-Market Jobs: {total_jobs}
-Top Companies: {companies[:5]}
+        prompt = f"""
+You are an expert global career strategist.
+
+Skills:
+{skills}
+
+Target Role:
+{role}
+
+Market Jobs Found:
+{total_jobs}
+
+Top Hiring Companies:
+{companies[:5]}
 
 Provide:
 
 1. Career Summary
 2. Skill Gap Analysis
-3. 30-Day Learning Roadmap
+3. 30-Day Roadmap
 4. Hiring Probability
 
-Keep the answer concise and practical.
+Keep it concise and practical.
 """
 
         response = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
+            temperature=0.3,
             messages=[
                 {
                     "role": "system",
-                    "content": "You are an expert career strategist."
+                    "content": "You are a world-class career advisor."
                 },
                 {
                     "role": "user",
                     "content": prompt
                 }
-            ],
-            temperature=0.3,
+            ]
         )
 
-        result = response.choices[0].message.content
-
-        print("\n==============================")
-        print("GROQ SUCCESS")
-        print("==============================\n")
-
-        return result
+        return response.choices[0].message.content
 
     except Exception as e:
-        print("\n==============================")
-        print("GROQ ERROR")
-        print(type(e).__name__)
-        print(str(e))
-        print("==============================\n")
-
+        print("GROQ ERROR:", str(e))
         return f"AI ERROR: {str(e)}"
 
-# ----------------------------
-# ANALYZE API
-# ----------------------------
+# ==================================
+# ANALYZE
+# ==================================
 @app.post("/analyze")
 def analyze(data: AnalyzeRequest):
 
-    skills = [s.strip() for s in data.skills.split(",") if s.strip()]
+    skills = [
+        s.strip()
+        for s in data.skills.split(",")
+        if s.strip()
+    ]
 
     if not skills:
-        return {"error": "No skills provided"}
+        return {
+            "error": "No skills provided"
+        }
 
     total_jobs = 0
-    companies, locations, titles = [], [], []
+
+    companies = []
+    locations = []
+    titles = []
 
     skill_breakdown = []
 
     for skill in skills:
-        jobs = get_jobs(skill, data.country.lower())
+
+        jobs = get_jobs(
+            skill,
+            data.country.lower()
+        )
+
         total_jobs += len(jobs)
 
-        for j in jobs:
-            companies.append(j.get("company", {}).get("display_name", "Unknown"))
-            locations.append(j.get("location", {}).get("display_name", "Unknown"))
-            titles.append(j.get("title", "Unknown"))
+        for job in jobs:
+
+            company = job.get(
+                "company",
+                {}
+            ).get(
+                "display_name",
+                "Unknown"
+            )
+
+            location = job.get(
+                "location",
+                {}
+            ).get(
+                "display_name",
+                "Unknown"
+            )
+
+            title = job.get(
+                "title",
+                "Unknown"
+            )
+
+            companies.append(company)
+            locations.append(location)
+            titles.append(title)
 
         skill_breakdown.append({
             "skill": skill,
             "job_count": len(jobs)
         })
 
-    top_companies = [x[0] for x in Counter(companies).most_common(10)]
-    top_locations = [x[0] for x in Counter(locations).most_common(10)]
-    top_titles = [x[0] for x in Counter(titles).most_common(10)]
+    top_companies = [
+        x[0]
+        for x in Counter(companies).most_common(10)
+    ]
 
-    market_score = min(total_jobs * 2, 100)
-    
+    top_locations = [
+        x[0]
+        for x in Counter(locations).most_common(10)
+    ]
+
+    top_titles = [
+        x[0]
+        for x in Counter(titles).most_common(10)
+    ]
+
+    market_score = min(
+        total_jobs * 2,
+        100
+    )
+
     hiring_probability = min(
-        50 + (market_Score // 2),
+        50 + (market_score // 2),
         95
     )
 
@@ -187,10 +253,8 @@ def analyze(data: AnalyzeRequest):
         top_companies
     )
 
-    # ----------------------------
-    # SAAS V3: SAVE REPORT
-    # ----------------------------
     report_id = str(uuid4())
+
     user_id = data.user_id or "guest"
 
     report = {
@@ -221,15 +285,31 @@ def analyze(data: AnalyzeRequest):
         "market_data": report["market_data"],
         "skill_breakdown": skill_breakdown,
         "ai_insight": ai_insight,
-        "version": "saas-v3"
+        "version": "saas-v4"
     }
 
-# ----------------------------
-# HISTORY API (SAAS FEATURE)
-# ----------------------------
+# ==================================
+# HISTORY
+# ==================================
 @app.get("/history/{user_id}")
 def history(user_id: str):
     return {
         "user_id": user_id,
         "reports": db.get(user_id, [])
+    }
+
+# ==================================
+# TEST ADZUNA
+# ==================================
+@app.get("/test-adzuna")
+def test_adzuna():
+
+    jobs = get_jobs(
+        "python",
+        "us"
+    )
+
+    return {
+        "jobs_found": len(jobs),
+        "sample_job": jobs[0] if jobs else None
     }
