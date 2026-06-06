@@ -57,9 +57,7 @@ export default function Home() {
   return (
     <div style={styles.page}>
       <div style={styles.sidebar}>
-        <h2 style={styles.logo}>
-          AI Career Navigator
-        </h2>
+        <h2 style={styles.logo}>AI Career Navigator</h2>
 
         <input
           style={styles.input}
@@ -82,13 +80,8 @@ export default function Home() {
           onChange={(e) => setCountry(e.target.value)}
         />
 
-        <button
-          style={styles.button}
-          onClick={analyze}
-        >
-          {loading
-            ? "Analyzing..."
-            : "Run Analysis"}
+        <button style={styles.button} onClick={analyze}>
+          {loading ? "Analyzing..." : "Run Analysis"}
         </button>
       </div>
 
@@ -97,15 +90,14 @@ export default function Home() {
           <div style={styles.hero}>
             <h1>🚀 AI Global Career Navigator</h1>
             <p>
-              Analyze worldwide demand for your
-              skills and get AI-powered career
-              recommendations.
+              Analyze worldwide demand for your skills and get AI-powered career recommendations.
             </p>
           </div>
         )}
 
         {data && (
           <>
+            {/* KPI CARDS */}
             <div style={styles.cards}>
               <MetricCard
                 icon={<Target />}
@@ -128,27 +120,45 @@ export default function Home() {
               <MetricCard
                 icon={<Building2 />}
                 title="Companies"
-                value={
-                  data.market_data.top_companies
-                    .length
-                }
+                value={data.market_data.top_companies.length}
               />
             </div>
 
+            {/* 🔥 NEW BANNER (ADDED AS REQUESTED) */}
+            <div
+              style={{
+                background:
+                  "linear-gradient(135deg,#0A66C2,#2563eb)",
+                color: "white",
+                padding: 24,
+                borderRadius: 20,
+                marginBottom: 20,
+              }}
+            >
+              <h2>🎯 Career Outlook</h2>
+
+              <p>
+                Your profile currently matches{" "}
+                {data.market_data.total_jobs_found} active opportunities in{" "}
+                {(country || "global").toUpperCase()}.
+              </p>
+            </div>
+
+            {/* 📊 CHART (UPDATED VERSION) */}
             <div style={styles.chartPanel}>
               <h3>📈 Skill Demand Analysis</h3>
 
-              <ResponsiveContainer
-                width="100%"
-                height={300}
-              >
-                <BarChart
-                  data={data.skill_breakdown}
-                >
+              <ResponsiveContainer width="100%" height={350}>
+                <BarChart data={data.skill_breakdown}>
                   <XAxis dataKey="skill" />
                   <YAxis />
                   <Tooltip />
-                  <Bar dataKey="job_count" />
+
+                  <Bar
+                    dataKey="job_count"
+                    fill="#2563eb"
+                    radius={[8, 8, 0, 0]}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -159,48 +169,27 @@ export default function Home() {
 
                 {data.market_data.top_companies.map(
                   (c: string, i: number) => (
-                    <div
-                      key={i}
-                      style={styles.tag}
-                    >
+                    <div key={i} style={styles.tag}>
                       {c}
                     </div>
                   )
                 )}
 
-                <h3
-                  style={{
-                    marginTop: 20,
-                  }}
-                >
-                  📍 Locations
-                </h3>
+                <h3 style={{ marginTop: 20 }}>📍 Locations</h3>
 
                 {data.market_data.top_locations.map(
                   (l: string, i: number) => (
-                    <div
-                      key={i}
-                      style={styles.tag}
-                    >
+                    <div key={i} style={styles.tag}>
                       {l}
                     </div>
                   )
                 )}
 
-                <h3
-                  style={{
-                    marginTop: 20,
-                  }}
-                >
-                  💼 Job Titles
-                </h3>
+                <h3 style={{ marginTop: 20 }}>💼 Job Titles</h3>
 
                 {data.market_data.top_job_titles.map(
                   (t: string, i: number) => (
-                    <div
-                      key={i}
-                      style={styles.tag}
-                    >
+                    <div key={i} style={styles.tag}>
                       {t}
                     </div>
                   )
@@ -208,13 +197,9 @@ export default function Home() {
               </div>
 
               <div style={styles.aiPanel}>
-                <h2>
-                  🤖 AI Career Copilot
-                </h2>
+                <h2>🤖 AI Career Copilot</h2>
 
-                <div style={styles.aiText}>
-                  {data.ai_insight}
-                </div>
+                <div style={styles.aiText}>{data.ai_insight}</div>
               </div>
             </div>
           </>
@@ -224,130 +209,128 @@ export default function Home() {
   );
 }
 
-function MetricCard({
-  title,
-  value,
-  icon,
-}: any) {
+function MetricCard({ title, value, icon }: any) {
   return (
     <div style={styles.card}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent:
-            "space-between",
-        }}
-      >
+      <div style={{ display: "flex", justifyContent: "space-between" }}>
         {icon}
       </div>
-
       <h4>{title}</h4>
-
       <h2>{value}</h2>
     </div>
   );
 }
 
+/* ✅ ONLY YOUR UPDATED STYLES OBJECT */
 const styles: any = {
   page: {
     display: "flex",
     minHeight: "100vh",
-    background: "#f4f7fb",
-    fontFamily: "Arial",
   },
 
   sidebar: {
-    width: 300,
-    background: "white",
-    padding: 20,
-    borderRight:
-      "1px solid #e5e7eb",
+    width: 320,
+    padding: 24,
+    background: "linear-gradient(180deg,#ffffff,#f8fafc)",
+    borderRight: "1px solid #e5e7eb",
     display: "flex",
     flexDirection: "column",
-    gap: 12,
+    gap: 14,
   },
 
   logo: {
     color: "#0A66C2",
+    fontWeight: 800,
+    fontSize: 28,
+    marginBottom: 10,
   },
 
   input: {
-    padding: 12,
-    borderRadius: 8,
-    border: "1px solid #ddd",
+    padding: 14,
+    borderRadius: 12,
+    border: "1px solid #d1d5db",
+    fontSize: 15,
+    outline: "none",
   },
 
   button: {
-    padding: 12,
-    background: "#0A66C2",
-    color: "white",
+    padding: 14,
+    borderRadius: 12,
     border: "none",
-    borderRadius: 8,
     cursor: "pointer",
+    background: "linear-gradient(135deg,#0A66C2,#2563eb)",
+    color: "white",
+    fontWeight: 700,
+    fontSize: 15,
   },
 
   main: {
     flex: 1,
     padding: 24,
+    overflowY: "auto",
   },
 
   hero: {
     textAlign: "center",
-    marginTop: 120,
+    marginTop: 140,
   },
 
   cards: {
     display: "grid",
-    gridTemplateColumns:
-      "repeat(4,1fr)",
-    gap: 15,
+    gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
+    gap: 16,
     marginBottom: 20,
   },
 
   card: {
-    background: "white",
     padding: 20,
-    borderRadius: 14,
-    boxShadow:
-      "0 2px 8px rgba(0,0,0,.05)",
+    borderRadius: 18,
+    color: "white",
+    background: "linear-gradient(135deg,#2563eb,#3b82f6)",
+    boxShadow: "0 10px 25px rgba(37,99,235,.25)",
   },
 
   chartPanel: {
     background: "white",
-    padding: 20,
-    borderRadius: 14,
+    padding: 24,
+    borderRadius: 20,
     marginBottom: 20,
+    boxShadow: "0 10px 25px rgba(0,0,0,.05)",
   },
 
   grid: {
     display: "grid",
-    gridTemplateColumns:
-      "1fr 1fr",
+    gridTemplateColumns: "1fr 1fr",
     gap: 20,
   },
 
   panel: {
     background: "white",
-    padding: 20,
-    borderRadius: 14,
+    padding: 24,
+    borderRadius: 20,
+    boxShadow: "0 10px 25px rgba(0,0,0,.05)",
   },
 
   aiPanel: {
-    background: "#0f172a",
+    background: "linear-gradient(135deg,#0f172a,#1e293b)",
     color: "white",
     padding: 24,
-    borderRadius: 14,
+    borderRadius: 20,
+    boxShadow: "0 10px 25px rgba(0,0,0,.2)",
   },
 
   aiText: {
     whiteSpace: "pre-wrap",
-    lineHeight: 1.7,
+    lineHeight: 1.8,
+    fontSize: 14,
   },
 
   tag: {
     background: "#eef4ff",
-    padding: 10,
-    borderRadius: 8,
-    marginBottom: 8,
+    borderLeft: "4px solid #2563eb",
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 10,
+    fontSize: 14,
   },
 };
