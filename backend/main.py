@@ -174,6 +174,11 @@ def analyze(data: AnalyzeRequest):
     top_titles = [x[0] for x in Counter(titles).most_common(10)]
 
     market_score = min(total_jobs * 2, 100)
+    
+    hiring_probability = min(
+        50 + (market_Score // 2),
+        95
+    )
 
     ai_insight = generate_ai_insight(
         data.skills,
@@ -193,6 +198,7 @@ def analyze(data: AnalyzeRequest):
         "profile": data.dict(),
         "market_data": {
             "market_score": market_score,
+            "hiring_probability": hiring_probability,
             "total_jobs_found": total_jobs,
             "top_companies": top_companies,
             "top_locations": top_locations,
