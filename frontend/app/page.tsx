@@ -1,6 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+} from "recharts";
+import {
+  TrendingUp,
+  Briefcase,
+  Target,
+  Building2,
+} from "lucide-react";
 
 export default function Home() {
   const [skills, setSkills] = useState("");
@@ -73,8 +87,8 @@ export default function Home() {
       <div style={styles.main}>
         {!data && !loading && (
           <div style={styles.empty}>
-            <h1>🚀 AI Career Intelligence SaaS</h1>
-            <p>Analyze jobs, skills & career opportunities instantly</p>
+            <h1>🚀 AI Global Career Navigator</h1>
+            <p>Discover worldwide demand for your skills, identify career gaps, and receive AI-powered recommendations.</p>
           </div>
         )}
 
@@ -88,7 +102,32 @@ export default function Home() {
         {data && (
           <>
             {/* CARDS */}
+
             <div style={styles.cards}>
+              <Card
+                title="Career Score"
+                value={`${data.market_data.market_score}/100`}
+                icon={<Target size={24} />}
+              />
+
+              <Card
+                title="Hiring Chance"
+                value={`${data.market_data.hiring_probability || 80}%`}
+                icon={<TrendingUp size={24} />}
+              />
+
+              <Card
+                title="Jobs Found"
+                value={data.market_data.total_jobs_found}
+                icon={<Briefcase size={24} />}
+              />
+
+              <Card
+                title="Companies"
+                value={data.market_data.top_companies.length}
+                icon={<Building2 size={24} />}
+              />
+            </div>
               <Card title="Market Score" value={data.market_data.market_score} />
               <Card title="Jobs Found" value={data.market_data.total_jobs_found} />
               <Card title="Companies" value={data.market_data.top_companies.length} />
@@ -99,12 +138,12 @@ export default function Home() {
               <div style={styles.panel}>
                 <h3>Top Companies</h3>
                 {data.market_data.top_companies.map((c: string, i: number) => (
-                  <div key={i} style={styles.item}>{c}</div>
+                  <div key={i} style={styles.companyCard}>{c}</div>
                 ))}
 
                 <h3>Locations</h3>
                 {data.market_data.top_locations.map((l: string, i: number) => (
-                  <div key={i} style={styles.item}>{l}</div>
+                  <div key={i} style={styles.locationCard}> 📍 {l}</div>
                 ))}
 
                 <h3>Job Titles</h3>
@@ -112,6 +151,38 @@ export default function Home() {
                   <div key={i} style={styles.item}>{t}</div>
                 ))}
               </div>
+            <div style={styles.chartPanel}>
+              <h3>📈 Skill Demand Analysis</h3>
+              chartPanel: {
+                background: "white",
+                borderRadius: "16px",
+                padding: "20px",
+                marginBottom: "20px",
+              },
+
+              companyCard: {
+                background: "#eff6ff",
+                padding: "10px",
+                borderRadius: "10px",
+                marginBottom: "8px",
+              },
+
+              locationCard: {
+                background: "#f8fafc",
+                padding: "10px",
+                borderRadius: "10px",
+                marginBottom: "8px",
+              },
+
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={data.skill_breakdown}>
+                  <XAxis dataKey="skill" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="job_count" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>  
 
               {/* AI */}
               <div style={styles.ai}>
@@ -127,13 +198,17 @@ export default function Home() {
 }
 
 /* CARD */
-function Card({ title, value }: any) {
+function Card({ title, value, icon }: any) {
   return (
-    <div style={styles.card}>
+  <div style={styles.card}>
+    <div style={{ display: "flex", justifyContent: "space-between" }}>
       <h4>{title}</h4>
-      <h2>{value}</h2>
+      {icon}
     </div>
-  );
+
+    <h2>{value}</h2>
+  </div>
+);
 }
 
 /* STYLES */
@@ -203,10 +278,10 @@ const styles: any = {
 
   ai: {
     flex: 1,
-    background: "#0A66C2",
+    background: "#0f172a",
     color: "white",
-    padding: "15px",
-    borderRadius: "10px",
+    padding: "24px",
+    borderRadius: "16px",
   },
 
   aiText: {
