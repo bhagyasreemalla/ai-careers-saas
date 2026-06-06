@@ -9,11 +9,12 @@ import {
   YAxis,
   Tooltip,
 } from "recharts";
+
 import {
-  TrendingUp,
-  Briefcase,
   Target,
+  Briefcase,
   Building2,
+  TrendingUp,
 } from "lucide-react";
 
 export default function Home() {
@@ -24,21 +25,23 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
 
   const API_URL =
-    process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    process.env.NEXT_PUBLIC_API_URL ||
+    "http://localhost:8000";
 
   const analyze = async () => {
     setLoading(true);
-    setData(null);
 
     try {
       const res = await fetch(`${API_URL}/analyze`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           skills,
           role,
           country,
-          user_id: "demo-user-1"
+          user_id: "demo-user",
         }),
       });
 
@@ -53,141 +56,165 @@ export default function Home() {
 
   return (
     <div style={styles.page}>
-      {/* SIDEBAR */}
       <div style={styles.sidebar}>
-        <h2 style={styles.logo}>AI Career Navigator</h2>
+        <h2 style={styles.logo}>
+          AI Career Navigator
+        </h2>
 
         <input
-          placeholder="Skills"
+          style={styles.input}
+          placeholder="Skills (python, sql)"
           value={skills}
           onChange={(e) => setSkills(e.target.value)}
-          style={styles.input}
         />
 
         <input
+          style={styles.input}
           placeholder="Role"
           value={role}
           onChange={(e) => setRole(e.target.value)}
-          style={styles.input}
         />
 
         <input
-          placeholder="Country (us, in, uk)"
+          style={styles.input}
+          placeholder="Country (us, uk, in)"
           value={country}
           onChange={(e) => setCountry(e.target.value)}
-          style={styles.input}
         />
 
-        <button onClick={analyze} style={styles.button} disabled={loading}>
-          {loading ? "Analyzing..." : "Run Analysis"}
+        <button
+          style={styles.button}
+          onClick={analyze}
+        >
+          {loading
+            ? "Analyzing..."
+            : "Run Analysis"}
         </button>
       </div>
 
-      {/* MAIN */}
       <div style={styles.main}>
-        {!data && !loading && (
-          <div style={styles.empty}>
+        {!data && (
+          <div style={styles.hero}>
             <h1>🚀 AI Global Career Navigator</h1>
-            <p>Discover worldwide demand for your skills, identify career gaps, and receive AI-powered recommendations.</p>
-          </div>
-        )}
-
-        {loading && (
-          <div style={styles.loading}>
-            <div style={styles.spinner}></div>
-            <p>Analyzing job market...</p>
+            <p>
+              Analyze worldwide demand for your
+              skills and get AI-powered career
+              recommendations.
+            </p>
           </div>
         )}
 
         {data && (
           <>
-            {/* CARDS */}
-
             <div style={styles.cards}>
-              <Card
+              <MetricCard
+                icon={<Target />}
                 title="Career Score"
-                value={`${data.market_data.market_score}/100`}
-                icon={<Target size={24} />}
+                value={`${data.market_data.market_score}`}
               />
 
-              <Card
+              <MetricCard
+                icon={<TrendingUp />}
                 title="Hiring Chance"
                 value={`${data.market_data.hiring_probability || 80}%`}
-                icon={<TrendingUp size={24} />}
               />
 
-              <Card
+              <MetricCard
+                icon={<Briefcase />}
                 title="Jobs Found"
                 value={data.market_data.total_jobs_found}
-                icon={<Briefcase size={24} />}
               />
 
-              <Card
+              <MetricCard
+                icon={<Building2 />}
                 title="Companies"
-                value={data.market_data.top_companies.length}
-                icon={<Building2 size={24} />}
+                value={
+                  data.market_data.top_companies
+                    .length
+                }
               />
             </div>
-              <Card title="Market Score" value={data.market_data.market_score} />
-              <Card title="Jobs Found" value={data.market_data.total_jobs_found} />
-              <Card title="Companies" value={data.market_data.top_companies.length} />
-            </div>
 
-            <div style={styles.grid}>
-              {/* LEFT */}
-              <div style={styles.panel}>
-                <h3>Top Companies</h3>
-                {data.market_data.top_companies.map((c: string, i: number) => (
-                  <div key={i} style={styles.companyCard}>{c}</div>
-                ))}
-
-                <h3>Locations</h3>
-                {data.market_data.top_locations.map((l: string, i: number) => (
-                  <div key={i} style={styles.locationCard}> 📍 {l}</div>
-                ))}
-
-                <h3>Job Titles</h3>
-                {data.market_data.top_job_titles.map((t: string, i: number) => (
-                  <div key={i} style={styles.item}>{t}</div>
-                ))}
-              </div>
             <div style={styles.chartPanel}>
               <h3>📈 Skill Demand Analysis</h3>
-              chartPanel: {
-                background: "white",
-                borderRadius: "16px",
-                padding: "20px",
-                marginBottom: "20px",
-              },
 
-              companyCard: {
-                background: "#eff6ff",
-                padding: "10px",
-                borderRadius: "10px",
-                marginBottom: "8px",
-              },
-
-              locationCard: {
-                background: "#f8fafc",
-                padding: "10px",
-                borderRadius: "10px",
-                marginBottom: "8px",
-              },
-
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={data.skill_breakdown}>
+              <ResponsiveContainer
+                width="100%"
+                height={300}
+              >
+                <BarChart
+                  data={data.skill_breakdown}
+                >
                   <XAxis dataKey="skill" />
                   <YAxis />
                   <Tooltip />
                   <Bar dataKey="job_count" />
                 </BarChart>
               </ResponsiveContainer>
-            </div>  
+            </div>
 
-              {/* AI */}
-              <div style={styles.ai}>
-                <h3>AI Career Copilot</h3>
-                <div style={styles.aiText}>{data.ai_insight}</div>
+            <div style={styles.grid}>
+              <div style={styles.panel}>
+                <h3>🏢 Top Companies</h3>
+
+                {data.market_data.top_companies.map(
+                  (c: string, i: number) => (
+                    <div
+                      key={i}
+                      style={styles.tag}
+                    >
+                      {c}
+                    </div>
+                  )
+                )}
+
+                <h3
+                  style={{
+                    marginTop: 20,
+                  }}
+                >
+                  📍 Locations
+                </h3>
+
+                {data.market_data.top_locations.map(
+                  (l: string, i: number) => (
+                    <div
+                      key={i}
+                      style={styles.tag}
+                    >
+                      {l}
+                    </div>
+                  )
+                )}
+
+                <h3
+                  style={{
+                    marginTop: 20,
+                  }}
+                >
+                  💼 Job Titles
+                </h3>
+
+                {data.market_data.top_job_titles.map(
+                  (t: string, i: number) => (
+                    <div
+                      key={i}
+                      style={styles.tag}
+                    >
+                      {t}
+                    </div>
+                  )
+                )}
+              </div>
+
+              <div style={styles.aiPanel}>
+                <h2>
+                  🤖 AI Career Copilot
+                </h2>
+
+                <div style={styles.aiText}>
+                  {data.ai_insight}
+                </div>
               </div>
             </div>
           </>
@@ -197,113 +224,130 @@ export default function Home() {
   );
 }
 
-/* CARD */
-function Card({ title, value, icon }: any) {
+function MetricCard({
+  title,
+  value,
+  icon,
+}: any) {
   return (
-  <div style={styles.card}>
-    <div style={{ display: "flex", justifyContent: "space-between" }}>
-      <h4>{title}</h4>
-      {icon}
-    </div>
+    <div style={styles.card}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent:
+            "space-between",
+        }}
+      >
+        {icon}
+      </div>
 
-    <h2>{value}</h2>
-  </div>
-);
+      <h4>{title}</h4>
+
+      <h2>{value}</h2>
+    </div>
+  );
 }
 
-/* STYLES */
 const styles: any = {
   page: {
     display: "flex",
-    height: "100vh",
+    minHeight: "100vh",
+    background: "#f4f7fb",
     fontFamily: "Arial",
-    background: "linear-gradient(135deg,#eef2ff,#f8fafc)",
   },
 
   sidebar: {
-    width: "300px",
-    padding: "20px",
+    width: 300,
     background: "white",
-    borderRight: "1px solid #eee",
+    padding: 20,
+    borderRight:
+      "1px solid #e5e7eb",
     display: "flex",
     flexDirection: "column",
-    gap: "10px",
+    gap: 12,
   },
 
-  logo: { color: "#0A66C2" },
+  logo: {
+    color: "#0A66C2",
+  },
 
   input: {
-    padding: "10px",
-    border: "1px solid #ccc",
-    borderRadius: "8px",
+    padding: 12,
+    borderRadius: 8,
+    border: "1px solid #ddd",
   },
 
   button: {
-    padding: "10px",
+    padding: 12,
     background: "#0A66C2",
     color: "white",
     border: "none",
-    borderRadius: "8px",
+    borderRadius: 8,
     cursor: "pointer",
   },
 
-  main: { flex: 1, padding: "20px", overflowY: "auto" },
-
-  empty: { textAlign: "center", marginTop: "120px" },
-
-  loading: { textAlign: "center", marginTop: "120px" },
-
-  spinner: {
-    width: "40px",
-    height: "40px",
-    border: "4px solid #ddd",
-    borderTop: "4px solid #0A66C2",
-    borderRadius: "50%",
-    margin: "auto",
-    animation: "spin 1s linear infinite",
+  main: {
+    flex: 1,
+    padding: 24,
   },
 
-  cards: { display: "flex", gap: "10px", marginBottom: "20px" },
+  hero: {
+    textAlign: "center",
+    marginTop: 120,
+  },
+
+  cards: {
+    display: "grid",
+    gridTemplateColumns:
+      "repeat(4,1fr)",
+    gap: 15,
+    marginBottom: 20,
+  },
 
   card: {
-    flex: 1,
     background: "white",
-    padding: "15px",
-    borderRadius: "10px",
+    padding: 20,
+    borderRadius: 14,
+    boxShadow:
+      "0 2px 8px rgba(0,0,0,.05)",
   },
 
-  grid: { display: "flex", gap: "20px" },
+  chartPanel: {
+    background: "white",
+    padding: 20,
+    borderRadius: 14,
+    marginBottom: 20,
+  },
 
-  panel: { flex: 1, background: "white", padding: "15px", borderRadius: "10px" },
+  grid: {
+    display: "grid",
+    gridTemplateColumns:
+      "1fr 1fr",
+    gap: 20,
+  },
 
-  ai: {
-    flex: 1,
+  panel: {
+    background: "white",
+    padding: 20,
+    borderRadius: 14,
+  },
+
+  aiPanel: {
     background: "#0f172a",
     color: "white",
-    padding: "24px",
-    borderRadius: "16px",
+    padding: 24,
+    borderRadius: 14,
   },
 
   aiText: {
     whiteSpace: "pre-wrap",
-    fontSize: "14px",
-    lineHeight: "1.6",
+    lineHeight: 1.7,
   },
 
-  item: {
-    padding: "6px 0",
-    borderBottom: "1px solid #eee",
+  tag: {
+    background: "#eef4ff",
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 8,
   },
 };
-
-/* ANIMATION */
-if (typeof window !== "undefined") {
-  const style = document.createElement("style");
-  style.innerHTML = `
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-  `;
-  document.head.appendChild(style);
-}
