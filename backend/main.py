@@ -4,18 +4,15 @@ from groq import Groq
 import os
 from fastapi.middleware.cors import CORSMiddleware
 
+app = FastAPI()
+
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-)
-
-app = FastAPI()
-
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-
 
 class Input(BaseModel):
     skills: list
