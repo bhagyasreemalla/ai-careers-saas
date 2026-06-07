@@ -48,6 +48,69 @@ app.add_middleware(
 # TEMP DATABASE
 # ==================================
 db = {}
+ROLE_SKILLS = {
+    "Data Analyst": [
+        "python",
+        "sql",
+        "power bi",
+        "tableau",
+        "excel"
+    ],
+
+    "HRIS Analyst": [
+        "workday",
+        "sql",
+        "excel",
+        "hr analytics",
+        "power bi"
+    ],
+
+    "People Analytics Analyst": [
+        "python",
+        "sql",
+        "power bi",
+        "tableau",
+        "statistics"
+    ]
+}
+
+COUNTRY_RANKINGS = [
+    {
+        "country": "Germany",
+        "score": 95,
+        "sponsorship": "High"
+    },
+    {
+        "country": "Canada",
+        "score": 94,
+        "sponsorship": "High"
+    },
+    {
+        "country": "Netherlands",
+        "score": 92,
+        "sponsorship": "High"
+    },
+    {
+        "country": "Australia",
+        "score": 90,
+        "sponsorship": "High"
+    },
+    {
+        "country": "Ireland",
+        "score": 89,
+        "sponsorship": "High"
+    },
+    {
+        "country": "UK",
+        "score": 86,
+        "sponsorship": "Medium"
+    },
+    {
+        "country": "USA",
+        "score": 84,
+        "sponsorship": "Medium"
+    }
+]
 
 # ==================================
 # REQUEST MODEL
@@ -154,7 +217,84 @@ Keep it concise and practical.
     except Exception as e:
         print("GROQ ERROR:", str(e))
         return f"AI ERROR: {str(e)}"
+def get_skill_gap(role, skills):
 
+    required = ROLE_SKILLS.get(role, [])
+
+    user_skills = [
+        s.lower()
+        for s in skills
+    ]
+
+    missing = [
+        s
+        for s in required
+        if s.lower() not in user_skills
+    ]
+
+    matched = [
+        s
+        for s in required
+        if s.lower() in user_skills
+    ]
+
+    return {
+        "matched_skills": matched,
+        "missing_skills": missing
+    }
+
+
+def generate_timeline(missing_skills):
+
+    timeline = []
+
+    month = 1
+
+    for skill in missing_skills:
+
+        timeline.append({
+            "month": month,
+            "goal": f"Learn {skill}"
+        })
+
+        month += 1
+
+    return timeline
+
+
+def recommend_career_paths(skills):
+
+    recommendations = []
+
+    user = [
+        s.lower()
+        for s in skills
+    ]
+
+    for role, required in ROLE_SKILLS.items():
+
+        matches = len(
+            set(user).intersection(
+                set(required)
+            )
+        )
+
+        score = int(
+            (matches / len(required))
+            * 100
+        )
+
+        recommendations.append({
+            "role": role,
+            "match_score": score
+        })
+
+    recommendations.sort(
+        key=lambda x: x["match_score"],
+        reverse=True
+    )
+
+    return recommendations[:5]
 # ==================================
 # ANALYZE
 # ==================================
@@ -177,6 +317,8 @@ def analyze(data: AnalyzeRequest):
     companies = []
     locations = []
     titles = []
+    
+    job_links = []
 
     skill_breakdown = []
 
@@ -212,6 +354,15 @@ def analyze(data: AnalyzeRequest):
                 "title",
                 "Unknown"
             )
+            job_links.append({
+                "title": title,
+                "company": company,
+                "location": location,
+                "url": job.get(
+                    "redirect_url",
+                    ""
+                )
+            })
 
             companies.append(company)
             locations.append(location)
@@ -246,6 +397,18 @@ def analyze(data: AnalyzeRequest):
         50 + (market_score // 2),
         95
     )
+    skill_gap = get_skill_gap(
+    data.role,
+    skills
+    )
+
+    timeline = generate_timeline(
+        skill_gap["missing_skills"]
+    )
+
+    career_paths = recommend_career_paths(
+        skills
+    )
 
     ai_insight = generate_ai_insight(
         data.skills,
@@ -271,6 +434,11 @@ def analyze(data: AnalyzeRequest):
         },
         "skill_breakdown": skill_breakdown,
         "ai_insight": ai_insight,
+        "skill_gap": skill_gap,
+        "timeline": timeline,
+        "career_paths": career_paths,
+        "country_rankings": COUNTRY_RANKINGS,
+        "job_links": job_links,
         "timestamp": time.time()
     }
 
@@ -285,10 +453,14 @@ def analyze(data: AnalyzeRequest):
         "profile": data.dict(),
         "market_data": report["market_data"],
         "skill_breakdown": skill_breakdown,
+        "skill_gap": skill_gap,
+        "timeline": timeline,
+        "career_paths": career_paths,
+        "country_rankings": COUNTRY_RANKINGS,
+        "job_links": job_links[:20],
         "ai_insight": ai_insight,
-        "version": "saas-v4"
+        "version": "saas-v5"
     }
-
 # ==================================
 # HISTORY
 # ==================================
@@ -298,7 +470,6 @@ def history(user_id: str):
         "user_id": user_id,
         "reports": db.get(user_id, [])
     }
-
 # ==================================
 # TEST ADZUNA
 # ==================================
