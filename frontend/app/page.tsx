@@ -5,19 +5,19 @@ import ReactECharts from "echarts-for-react";
 
 export default function Page() {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [data, setData] = useState<any>(null);
 
   const analyze = async () => {
     try {
       setLoading(true);
+      setError("");
 
       const res = await fetch(
         "https://ai-careers-saas.onrender.com/analyze",
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             skills: ["Python", "SQL"],
             experience_years: 2,
@@ -26,68 +26,118 @@ export default function Page() {
         }
       );
 
+      if (!res.ok) throw new Error("API failed");
+
       const json = await res.json();
       setData(json);
-    } catch (err) {
-      console.error("API Error:", err);
+    } catch (err: any) {
+      setError(err.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
   };
 
-  const gaugeOption = (score: number) => ({
+  const gaugeOption = (value: number) => ({
     series: [
       {
         type: "gauge",
-        progress: { show: true },
-        detail: { valueAnimation: true, formatter: "{value}%" },
-        data: [{ value: score }],
+        progress: { show: true, width: 18 },
+        axisLine: {
+          lineStyle: {
+            width: 18,
+            color: [
+              [0.3, "#ef4444"],
+              [0.7, "#f59e0b"],
+              [1, "#22c55e"],
+            ],
+          },
+        },
+        detail: {
+          valueAnimation: true,
+          formatter: "{value}%",
+          fontSize: 20,
+        },
+        data: [{ value }],
+      },
+    ],
+  });
+
+  const barOption = (jobs: any[]) => ({
+    xAxis: {
+      type: "category",
+      data: jobs.map((j) => j.title),
+      axisLabel: { rotate: 20 },
+    },
+    yAxis: { type: "value" },
+    series: [
+      {
+        data: jobs.map((j) => j.score),
+        type: "bar",
+        itemStyle: { borderRadius: 6 },
       },
     ],
   });
 
   return (
-    <div style={styles.container}>
-      <h1 style={styles.title}>🚀 AI Career Copilot V5</h1>
+    <div style={styles.page}>
+      {/* HEADER */}
+      <div style={styles.header}>
+        <h1>🚀 AI Career Copilot V5</h1>
+        <p>Smart ATS • Job Matching • AI Insights</p>
+      </div>
 
+      {/* ACTION */}
       <button onClick={analyze} style={styles.button}>
         {loading ? "Analyzing..." : "Run AI Analysis"}
       </button>
 
+      {error && <p style={styles.error}>{error}</p>}
+
+      {/* EMPTY STATE */}
       {!data && !loading && (
-        <p style={{ marginTop: 20 }}>Click analyze to generate insights</p>
+        <div style={styles.empty}>
+          <p>Click analyze to generate your career intelligence report</p>
+        </div>
       )}
 
+      {/* DASHBOARD */}
       {data && (
         <div style={styles.grid}>
           {/* ATS SCORE */}
           <div style={styles.card}>
             <h2>ATS Score</h2>
-            <ReactECharts
-              option={gaugeOption(data.ats_score)}
-              style={{ height: 250 }}
-            />
+            <ReactECharts option={gaugeOption(data.ats_score)} />
           </div>
 
-          {/* MISSING SKILLS */}
+          {/* SKILLS */}
           <div style={styles.card}>
-            <h2>Missing Skills</h2>
-            <ul>
-              {data.missing_skills.map((skill: string, i: number) => (
-                <li key={i}>⚠ {skill}</li>
-              ))}
-            </ul>
+            <h2>Skill Gap</h2>
+            {data.missing_skills?.length ? (
+              <ul>
+                {data.missing_skills.map((s: string, i: number) => (
+                  <li key={i}>⚠ {s}</li>
+                ))}
+              </ul>
+            ) : (
+              <p>All core skills matched 🎯</p>
+            )}
           </div>
 
-          {/* JOB MATCHES */}
+          {/* JOB CHART */}
+          <div style={{ ...styles.card, gridColumn: "span 2" }}>
+            <h2>Job Match Score</h2>
+            <ReactECharts option={barOption(data.job_matches)} />
+          </div>
+
+          {/* JOB LIST */}
           <div style={styles.card}>
-            <h2>Top Jobs</h2>
-            {data.job_matches.map((job: any, i: number) => (
+            <h2>Top Roles</h2>
+            {data.job_matches?.map((job: any, i: number) => (
               <div key={i} style={styles.jobCard}>
-                <h3>{job.title}</h3>
-                <p>Match: {job.score}%</p>
+                <strong>{job.title}</strong>
+                <p>{job.score}% match</p>
                 <a href={job.link} target="_blank">
-                  View Job →
+                  View →
                 </a>
               </div>
             ))}
@@ -95,10 +145,8 @@ export default function Page() {
 
           {/* AI INSIGHT */}
           <div style={{ ...styles.card, gridColumn: "span 2" }}>
-            <h2>AI Career Insight</h2>
-            <pre style={{ whiteSpace: "pre-wrap" }}>
-              {data.ai_insight}
-            </pre>
+            <h2>AI Career Intelligence</h2>
+            <pre style={styles.aiBox}>{data.ai_insight}</pre>
           </div>
         </div>
       )}
@@ -106,41 +154,65 @@ export default function Page() {
   );
 }
 
+/* ---------------- STYLES ---------------- */
+
 const styles: any = {
-  container: {
+  page: {
     padding: 30,
     fontFamily: "Arial",
-    background: "#0f172a",
-    color: "white",
+    background: "#0b1220",
+    color: "#fff",
     minHeight: "100vh",
   },
-  title: {
-    fontSize: 28,
+
+  header: {
     marginBottom: 20,
   },
+
   button: {
-    padding: "10px 20px",
+    padding: "12px 20px",
     background: "#38bdf8",
     border: "none",
-    borderRadius: 8,
-    cursor: "pointer",
+    borderRadius: 10,
     fontWeight: "bold",
+    cursor: "pointer",
   },
+
+  error: {
+    color: "#f87171",
+    marginTop: 10,
+  },
+
+  empty: {
+    marginTop: 30,
+    opacity: 0.7,
+  },
+
   grid: {
+    marginTop: 30,
     display: "grid",
     gridTemplateColumns: "repeat(2, 1fr)",
     gap: 20,
-    marginTop: 30,
   },
+
   card: {
-    background: "#1e293b",
+    background: "#111827",
     padding: 20,
-    borderRadius: 12,
+    borderRadius: 14,
+    boxShadow: "0 10px 25px rgba(0,0,0,0.3)",
   },
+
   jobCard: {
-    padding: 10,
-    marginBottom: 10,
     background: "#0f172a",
-    borderRadius: 8,
+    padding: 10,
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+
+  aiBox: {
+    whiteSpace: "pre-wrap",
+    background: "#0f172a",
+    padding: 15,
+    borderRadius: 10,
   },
 };
