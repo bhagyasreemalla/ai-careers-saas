@@ -1,7 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import ReactECharts from "echarts-for-react";
+import dynamic from "next/dynamic";
+
+const ReactECharts = dynamic(() => import("echarts-for-react"), {
+  ssr: false,
+});
 
 export default function Page() {
   const [data, setData] = useState<any>(null);
@@ -25,7 +29,6 @@ export default function Page() {
     setLoading(false);
   };
 
-  // ATS GAUGE
   const gaugeOption = {
     series: [
       {
@@ -37,7 +40,6 @@ export default function Page() {
     ],
   };
 
-  // JOB CHART
   const jobOption = {
     xAxis: {
       type: "category",
@@ -69,13 +71,13 @@ export default function Page() {
           <ReactECharts option={jobOption} />
 
           <h2>Missing Skills</h2>
-          <pre>{JSON.stringify(data.missing_skills, null, 2)}</pre>
+          <pre>{JSON.stringify(data?.missing_skills, null, 2)}</pre>
 
           <h2>AI Insight</h2>
-          <p>{data.ai_insight}</p>
+          <p>{data?.ai_insight}</p>
 
           <h2>Job Links</h2>
-          {data.job_matches.map((job: any, i: number) => (
+          {data?.job_matches?.map((job: any, i: number) => (
             <div key={i}>
               <a href={job.link} target="_blank">
                 {job.title} ({job.match_score}% match)
