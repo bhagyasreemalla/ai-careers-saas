@@ -13,7 +13,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-
+)
 class Input(BaseModel):
     skills: list
     experience_years: int
