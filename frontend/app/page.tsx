@@ -10,7 +10,7 @@ export default function Page() {
   const runAnalysis = async () => {
     setLoading(true);
 
-    const res = await fetch("https://YOUR-RENDER-URL.onrender.com/analyze", {
+    const res = await fetch("https://ai-careers-saas.onrender.com/analyze", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
