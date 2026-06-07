@@ -191,6 +191,7 @@ def analyze(data: AnalyzeRequest):
 
         for job in jobs:
 
+            job.get("redirect_url")
             company = job.get(
                 "company",
                 {}
